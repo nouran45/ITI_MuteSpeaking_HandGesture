@@ -1,0 +1,69 @@
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Build directories
+build/
+out/
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+*.bin
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# AVR specific
+*.eep
+*.lss
+*.sym
+*.map
+
+# Editor backup files
+*~
+*.swp
+*.swo
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# CSV data files
+*.csv
+
+# Editor configuration
+.vscode/
+
+# Backup files
+*.bak
+*.backup
+
+# Environment configuration
+.env
