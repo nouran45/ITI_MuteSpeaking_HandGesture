@@ -27,6 +27,7 @@ INC_DIRS := \
   src/LIB \
   src/HAL/LCD \
   src/HAL/MPU6050 \
+  src/HAL/TCA9548A \
   src/MCAL/DIO \
   src/MCAL/I2C \
   src/MCAL/UART

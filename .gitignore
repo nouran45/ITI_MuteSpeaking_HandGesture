@@ -47,7 +47,6 @@ out/
 *.idb
 *.pdb
 
-<<<<<<< HEAD
 # AVR specific
 *.eep
 *.lss
@@ -76,7 +75,7 @@ __pycache__/
 
 # Environment configuration
 .env
-=======
+
 # Kernel Module Compile Results
 *.mod*
 *.cmd
@@ -86,6 +85,10 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-# debug information files
+# Debug information files
 *.dwo
->>>>>>> f9835d2da6bb783fc38c3eb5ad724d410f02db0d
+
+# Build system files
+Makefile
+makefile
+*.mk

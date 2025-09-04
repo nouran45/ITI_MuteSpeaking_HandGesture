@@ -14,7 +14,7 @@ BUILD_DIR=build
 TESTS_DIR=tests
 
 # Define test targets
-TEST_TARGETS= lcd_test_only LCD_diagnostic LCD_diagnostic_tool
+TEST_TARGETS= lcd_test_only LCD_diagnostic LCD_diagnostic_tool TCA9548A_test
 
 # Default target is all tests
 all: $(TEST_TARGETS)
@@ -39,13 +39,18 @@ LCD_diagnostic: directories
 	$(CC) $(CFLAGS) $(BUILD_DIR)/LCD_diagnostic.o $(BUILD_DIR)/DIO_PROGRAM.o $(BUILD_DIR)/LCD_Program.o -o $(BUILD_DIR)/LCD_diagnostic.elf
 	$(OBJ2HEX) -O ihex -R .eeprom $(BUILD_DIR)/LCD_diagnostic.elf $(BUILD_DIR)/LCD_diagnostic.hex
 
-# LCD diagnostic tool
-LCD_diagnostic_tool: directories
-	$(CC) $(CFLAGS) -c $(TESTS_DIR)/LCD_diagnostic_tool.c -o $(BUILD_DIR)/LCD_diagnostic_tool.o
+# TCA9548A test
+TCA9548A_test: directories
+	$(CC) $(CFLAGS) -c $(TESTS_DIR)/TCA9548A_test.c -o $(BUILD_DIR)/TCA9548A_test.o
 	$(CC) $(CFLAGS) -c $(MCAL_DIR)/DIO/DIO_PROGRAM.c -o $(BUILD_DIR)/DIO_PROGRAM.o
 	$(CC) $(CFLAGS) -c $(HAL_DIR)/LCD/LCD_Program.c -o $(BUILD_DIR)/LCD_Program.o
-	$(CC) $(CFLAGS) $(BUILD_DIR)/LCD_diagnostic_tool.o $(BUILD_DIR)/DIO_PROGRAM.o $(BUILD_DIR)/LCD_Program.o -o $(BUILD_DIR)/LCD_diagnostic_tool.elf
-	$(OBJ2HEX) -O ihex -R .eeprom $(BUILD_DIR)/LCD_diagnostic_tool.elf $(BUILD_DIR)/LCD_diagnostic_tool.hex
+	$(CC) $(CFLAGS) -c $(MCAL_DIR)/I2C/i2c_helpers.c -o $(BUILD_DIR)/i2c_helpers.o
+	$(CC) $(CFLAGS) -c $(HAL_DIR)/TCA9548A/TCA9548A_Program.c -o $(BUILD_DIR)/TCA9548A_Program.o
+	$(CC) $(CFLAGS) -c $(HAL_DIR)/TCA9548A/TCA9548A_Integration.c -o $(BUILD_DIR)/TCA9548A_Integration.o
+	$(CC) $(CFLAGS) -c $(HAL_DIR)/MPU6050/MPU6050_Program.c -o $(BUILD_DIR)/MPU6050_Program.o
+	$(CC) $(CFLAGS) -c $(MCAL_DIR)/UART/UART_Program.c -o $(BUILD_DIR)/UART_Program.o
+	$(CC) $(CFLAGS) $(BUILD_DIR)/TCA9548A_test.o $(BUILD_DIR)/DIO_PROGRAM.o $(BUILD_DIR)/LCD_Program.o $(BUILD_DIR)/i2c_helpers.o $(BUILD_DIR)/TCA9548A_Program.o $(BUILD_DIR)/TCA9548A_Integration.o $(BUILD_DIR)/MPU6050_Program.o $(BUILD_DIR)/UART_Program.o -o $(BUILD_DIR)/TCA9548A_test.elf -lm
+	$(OBJ2HEX) -O ihex -R .eeprom $(BUILD_DIR)/TCA9548A_test.elf $(BUILD_DIR)/TCA9548A_test.hex
 
 # Flash specific test (e.g., make flash_lcd_test_only)
 flash_%: %
