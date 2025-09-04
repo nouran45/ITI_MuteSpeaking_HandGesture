@@ -1,4 +1,4 @@
-MCU=atmega32a
+MCU=atmega32
 F_CPU=8000000UL
 CC=avr-gcc
 CFLAGS=-Os -DF_CPU=$(F_CPU) -mmcu=$(MCU) -I src/LIB -I src/MCAL -I src/HAL

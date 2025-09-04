@@ -1,7 +1,6 @@
 #ifndef I2C_INTERFACE_H
 #define I2C_INTERFACE_H
 
-#include "STD_TYPES.h"
 
 void I2C_voidInit(void);
 void I2C_voidStart(void);

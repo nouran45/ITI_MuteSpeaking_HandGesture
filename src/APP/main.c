@@ -59,9 +59,9 @@ int main(void) {
         s16AccelX = 0, s16AccelY = 0, s16AccelZ = 0;
         s16GyroX = 0, s16GyroY = 0, s16GyroZ = 0;
         
-        // Read accelerometer and gyroscope data
-        MPU6050_voidReadAccel(&s16AccelX, &s16AccelY, &s16AccelZ);
-        MPU6050_voidReadGyro(&s16GyroX, &s16GyroY, &s16GyroZ);
+        // Read accelerometer and gyroscope data from sensor 0
+        MPU6050_voidReadAccel(0, &s16AccelX, &s16AccelY, &s16AccelZ);
+        MPU6050_voidReadGyro(0, &s16GyroX, &s16GyroY, &s16GyroZ);
         
         // Send live data to laptop in CSV format
         UART_voidSendNumber(s16AccelX);

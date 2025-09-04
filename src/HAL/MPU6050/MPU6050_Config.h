@@ -1,6 +1,9 @@
 #ifndef MPU6050_CONFIG_H
 #define MPU6050_CONFIG_H
 
+// How many sensors you want to support
+#define MPU6050_MAX_SENSORS 5   // change if you need fewer/ more
+
 // MPU6050 Register Addresses
 #define MPU6050_REG_PWR_MGMT_1   0x6B
 #define MPU6050_REG_SMPLRT_DIV   0x19

@@ -1,7 +1,7 @@
 #ifndef UART_INTERFACE_H
 #define UART_INTERFACE_H
 
-#include "STD_TYPES.h"
+
 
 // UART Functions
 void UART_voidInit(void);

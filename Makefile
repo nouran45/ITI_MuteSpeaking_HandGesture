@@ -1,72 +1,77 @@
-MCU=atmega32a
-F_CPU=8000000UL
-CC=avr-gcc
-CFLAGS=-Os -DF_CPU=$(F_CPU) -mmcu=$(MCU) -I src/LIB -I src/MCAL -I src/HAL
-OBJ2HEX=avr-objcopy
+# ===== Project =====
+TARGET := firmware
+MCU    := atmega32
+F_CPU  := 8000000UL
 
-# Directory structure
-SRC_DIR=src
-LIB_DIR=$(SRC_DIR)/LIB
-MCAL_DIR=$(SRC_DIR)/MCAL
-HAL_DIR=$(SRC_DIR)/HAL
-APP_DIR=$(SRC_DIR)/APP
-BUILD_DIR=build
+# ===== Toolchain (WinAVR on PATH) =====
+CC      := avr-gcc
+OBJCOPY := avr-objcopy
+SIZE    := avr-size
+AVRDUDE := avrdude
+AVRDUDE_CONF := C:\iti\IMT_SDK_Win_64\WinAVR\bin\avrdude.conf
 
-# Target executable
-TARGET=main
+# ===== Sources (one and two levels under src/) =====
+SRC := \
+  $(wildcard src/*.c) \
+  $(wildcard src/*/*.c) \
+  $(wildcard src/*/*/*.c)
 
-# Source files
-SRC_FILES=src/MCAL/DIO/DIO_PROGRAM.c \
-          src/MCAL/I2C/I2C_Program.c \
-          src/HAL/LCD/LCD_Program.c \
-          src/APP/main.c \
-          src/HAL/MPU6050/MPU6050_Program.c \
-          src/MCAL/UART/UART_Program.c
+# ===== Include dirs (LIST ONLY DIRECTORIES) =====
+INC_DIRS := \
+  . \
+  include \
+  src \
+  src/APP \
+  src/HAL \
+  src/MCAL \
+  src/LIB \
+  src/HAL/LCD \
+  src/HAL/MPU6050 \
+  src/MCAL/DIO \
+  src/MCAL/I2C \
+  src/MCAL/UART
+INC := $(addprefix -I,$(INC_DIRS))
 
-# Object files
-OBJ=$(patsubst %.c,$(BUILD_DIR)/%.o,$(notdir $(SRC_FILES)))
+# ===== Flags =====
+CFLAGS  := -std=gnu99 -Os -mmcu=$(MCU) -DF_CPU=$(F_CPU) $(INC) -Wall -Wextra -ffunction-sections -fdata-sections
+LDFLAGS := -mmcu=$(MCU) -Wl,--gc-sections
+LDLIBS  := -lm
 
-all: directories $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex
+# ===== Programmer (edit as needed) =====
+PROGRAMMER := usbasp
+PORT       :=
+BAUD       :=
 
-# Create necessary directories
-directories:
-	mkdir -p $(BUILD_DIR)
+AVRDUDE_FLAGS := -C "$(AVRDUDE_CONF)" -p m32 -c $(PROGRAMMER)
+ifneq ($(PORT),)
+  AVRDUDE_FLAGS += -P $(PORT)
+endif
+ifneq ($(BAUD),)
+  AVRDUDE_FLAGS += -b $(BAUD)
+endif
 
-# Pattern rule to compile source files
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+# ===== Outputs =====
+OBJ := $(SRC:.c=.o)
+ELF := $(TARGET).elf
+HEX := $(TARGET).hex
+
+# ===== Rules =====
+all: $(HEX)
+	@$(SIZE) -C --mcu=$(MCU) $(ELF)
+
+$(HEX): $(ELF)
+	$(OBJCOPY) -O ihex -R .eeprom $< $@
+
+$(ELF): $(OBJ)
+	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
+
+%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Special rules for files in subdirectories
-$(BUILD_DIR)/DIO_PROGRAM.o: $(MCAL_DIR)/DIO/DIO_PROGRAM.c
-	$(CC) $(CFLAGS) -c $< -o $@
+flash: $(HEX)
+	$(AVRDUDE) $(AVRDUDE_FLAGS) -U flash:w:$(HEX):i
 
-$(BUILD_DIR)/I2C_Program.o: $(MCAL_DIR)/I2C/I2C_Program.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/UART_Program.o: $(MCAL_DIR)/UART/UART_Program.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/LCD_Program.o: $(HAL_DIR)/LCD/LCD_Program.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/MPU6050_Program.o: $(HAL_DIR)/MPU6050/MPU6050_Program.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/main.o: $(APP_DIR)/main.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-# Link object files to create ELF file
-$(BUILD_DIR)/$(TARGET).elf: $(OBJ)
-	$(CC) $(CFLAGS) $^ -o $@
-
-# Convert ELF to HEX
-$(BUILD_DIR)/$(TARGET).hex: $(BUILD_DIR)/$(TARGET).elf
-	$(OBJ2HEX) -O ihex -R .eeprom $< $@
-
-# Flash the HEX file to the microcontroller
-flash: $(BUILD_DIR)/$(TARGET).hex
-	avrdude -c usbasp -p $(MCU) -U flash:w:$<
-
-# Clean build artifacts
 clean:
-	rm -rf $(BUILD_DIR)
+	-rm -f $(OBJ) $(ELF) $(HEX)
+
+.PHONY: all flash clean
