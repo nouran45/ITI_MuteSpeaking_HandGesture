@@ -87,16 +87,11 @@ u8 TCA9548A_TestAllSensors(void) {
     u8 sensors_found = 0;
     TCA9548A_Status_t status;
     
-    UART_voidSendString("Testing all sensors on TCA9548A channels...\r\n");
-    
     for (u8 channel = 0; channel < 5; channel++) {
         // Select the channel
         status = TCA9548A_SelectChannel(channel);
         if (status != TCA9548A_OK) {
-            UART_voidSendString("Channel ");
-            UART_voidSendNumber(channel);
-            UART_voidSendString(": Failed to select\r\n");
-            continue;
+            continue; // Just skip failed channels
         }
         
         _delay_ms(10); // Small delay after channel selection
@@ -107,30 +102,11 @@ u8 TCA9548A_TestAllSensors(void) {
         
         if (status == TCA9548A_OK && who_am_i == 0x68) {
             sensors_found++;
-            UART_voidSendString("Channel ");
-            UART_voidSendNumber(channel);
-            UART_voidSendString(": MPU6050 found (WHO_AM_I=0x");
-            // Simple hex output
-            if (who_am_i >= 0x10) {
-                UART_voidSendNumber(who_am_i >> 4);
-            } else {
-                UART_voidSendString("0");
-            }
-            UART_voidSendNumber(who_am_i & 0x0F);
-            UART_voidSendString(")\r\n");
-        } else {
-            UART_voidSendString("Channel ");
-            UART_voidSendNumber(channel);
-            UART_voidSendString(": No MPU6050 found or communication error\r\n");
         }
     }
     
     // Disable all channels after testing
     TCA9548A_DisableAllChannels();
-    
-    UART_voidSendString("Sensor scan complete. Found ");
-    UART_voidSendNumber(sensors_found);
-    UART_voidSendString(" sensors.\r\n");
     
     return sensors_found;
 }
