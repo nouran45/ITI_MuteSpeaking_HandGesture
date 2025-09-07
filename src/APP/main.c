@@ -1,168 +1,183 @@
-#include "../src/LIB/STD_TYPES.h"
-#include "../src/LIB/BIT_MATH.h"
-#include "../src/MCAL/DIO/DIO_Interface.h"
-#include "../src/HAL/LCD/LCD_Interface.h"
-#include "../src/MCAL/I2C/i2c_helpers.h"
-#include "../src/HAL/TCA9548A/TCA9548A_Interface.h"
-#include "../src/HAL/TCA9548A/TCA9548A_Integration.h"
-#include "../src/MCAL/UART/UART_Interface.h"
+#include "../LIB/STD_TYPES.h"
+#include "../LIB/BIT_MATH.h"
+#include "../MCAL/DIO/DIO_Interface.h"
+#include "../HAL/LCD/LCD_Interface.h"
+#include "../MCAL/I2C/I2C_Interface.h"
+#include "../HAL/MPU6050/MPU6050_Interface.h"
+#include "../MCAL/UART/UART_Interface.h"
+#include "../MCAL/DIO/DIO_Register.h"
+#include "../HAL/TCA9548A/TCA9548A_Interface.h"
+#include "../HAL/TCA9548A/TCA9548A_Integration.h"
 #include <util/delay.h>
+#include <stdio.h>
 
-/*
- * TCA9548A Multiplexer Test Program
- * 
- * This program tests the TCA9548A I2C multiplexer functionality:
- * 1. Initializes all peripherals
- * 2. Tests TCA9548A communication
- * 3. Scans all channels for MPU6050 sensors
- * 4. Displays results on LCD and UART
- */
+// Define your 5 sensor configurations
+mpu6050_dev_t sensor_configs[5] = {
+    // Thumb sensor (uses mux channel 0)
+    { .i2c_addr = 0x68, .mux_channel = 0, .ax_off=0, .ay_off=0, .az_off=0, .gx_off=0, .gy_off=0, .gz_off=0 },
+    // Index finger sensor (uses mux channel 1)  
+    { .i2c_addr = 0x68, .mux_channel = 1, .ax_off=0, .ay_off=0, .az_off=0, .gx_off=0, .gy_off=0, .gz_off=0 },
+    // Middle finger sensor (uses mux channel 2)
+    { .i2c_addr = 0x68, .mux_channel = 2, .ax_off=0, .ay_off=0, .az_off=0, .gx_off=0, .gy_off=0, .gz_off=0 },
+    // Ring finger sensor (uses mux channel 3)
+    { .i2c_addr = 0x68, .mux_channel = 3, .ax_off=0, .ay_off=0, .az_off=0, .gx_off=0, .gy_off=0, .gz_off=0 },
+    // Palm sensor (uses mux channel 4)
+    { .i2c_addr = 0x68, .mux_channel = 4, .ax_off=0, .ay_off=0, .az_off=0, .gx_off=0, .gy_off=0, .gz_off=0 }
+};
 
 int main(void) {
-    TCA9548A_Status_t mux_status;
-    u8 sensors_found = 0;
+    s16 s16AccelX, s16AccelY, s16AccelZ;
+    s16 s16GyroX, s16GyroY, s16GyroZ;
     
     // Initialize peripherals
     DIO_voidInit();
-    UART_voidInit();
-    LCD_vidInit_4bits();
+    UART_voidInit();  // Initialize UART for laptop communication
+    LCD_vidInit_4bits();  // Using 4-bit mode to free up PC0 for I2C
     
     // Show initialization progress
-    LCD_vidWriteString((u8*)"TCA9548A Test");
-    LCD_vidGotoxy(0, 1);
-    LCD_vidWriteString((u8*)"Initializing...");
-    
-    UART_voidSendString("=================================\r\n");
-    UART_voidSendString("TCA9548A I2C Multiplexer Test\r\n");
-    UART_voidSendString("=================================\r\n");
-    
+    LCD_vidWriteString((u8*)"LCD: OK");
     _delay_ms(1000);
     
-    // Initialize I2C
-    UART_voidSendString("Initializing I2C bus...\r\n");
-    I2C_helpers_init(100000); // 100 kHz
+    // Send initialization message to laptop
+    UART_voidSendString("Smart Glove System Starting...\r\n");
+    UART_voidSendString("5-Sensor MPU6050 with TCA9548A Multiplexer\r\n");
+    UART_voidSendString("-------------------------------------------\r\n");
+    
+    LCD_vidGotoxy(0, 1);
+    LCD_vidWriteString((u8*)"I2C Init...");
+    I2C_voidInit();  // Try the improved I2C init with timeouts
     _delay_ms(500);
     
-    // Initialize TCA9548A
     LCD_vidGotoxy(0, 1);
-    LCD_vidWriteString((u8*)"Init TCA9548A...");
-    UART_voidSendString("Initializing TCA9548A multiplexer...\r\n");
+    LCD_vidWriteString((u8*)"I2C: OK     ");
+    _delay_ms(500);
+
+    // Initialize TCA9548A multiplexer
+    LCD_vidGotoxy(0, 1);
+    LCD_vidWriteString((u8*)"MUX Init...");
+    TCA9548A_Init();
+    _delay_ms(500);
     
-    mux_status = TCA9548A_Init();
+    LCD_vidGotoxy(0, 1);
+    LCD_vidWriteString((u8*)"MUX: OK     ");
+    _delay_ms(500);
     
-    if (mux_status == TCA9548A_OK) {
-        LCD_vidGotoxy(0, 1);
-        LCD_vidWriteString((u8*)"TCA9548A: OK   ");
-        UART_voidSendString("TCA9548A initialization successful!\r\n");
-        _delay_ms(1000);
+    // Register all 5 sensors with the MPU6050 driver
+    LCD_vidGotoxy(0, 1);
+    LCD_vidWriteString((u8*)"Sensors Reg...");
+    for(int i = 0; i < 5; i++) {
+        MPU6050_registerSensor(i, &sensor_configs[i]);
+    }
+
+    // Initialize the TCA9548A multiplexer callback
+    MPU6050_setMuxSelector(TCA9548A_SelectChannelCallback);
+    
+    // Initialize all MPU6050 sensors
+    LCD_vidGotoxy(0, 1);
+    LCD_vidWriteString((u8*)"MPU Init...");
+    MPU6050_initAllSensors();
+    _delay_ms(1000);  // Give MPU6050 time to initialize
+    
+    LCD_vidGotoxy(0, 1);
+    LCD_vidWriteString((u8*)"MPU: OK     ");
+    _delay_ms(500);
+    
+    // Test all sensors
+    LCD_vidGotoxy(0, 1);
+    LCD_vidWriteString((u8*)"Testing Sensors...");
+    u8 sensors_found = TCA9548A_TestAllSensors();
+    _delay_ms(1000);
+
+    UART_voidSendString("Testing all sensors on TCA9548A channels...\r\n");
+    for (u8 channel = 0; channel < 5; channel++) {
+        UART_voidSendString("Channel ");
+        UART_voidSendNumber(channel);
         
-        // Test communication
-        UART_voidSendString("Testing TCA9548A communication...\r\n");
-        mux_status = TCA9548A_TestCommunication();
+        // Test each channel individually to see which ones work
+        TCA9548A_Status_t status = TCA9548A_SelectChannel(channel);
+        _delay_ms(10);
         
-        if (mux_status == TCA9548A_OK) {
-            UART_voidSendString("TCA9548A communication test passed!\r\n");
-            
-            // Test all channels for sensors
-            LCD_Clear();
-            LCD_vidWriteString((u8*)"Scanning sensors");
-            LCD_vidGotoxy(0, 1);
-            LCD_vidWriteString((u8*)"Please wait...");
-            
-            sensors_found = TCA9548A_TestAllSensors();
-            
-            // Display results
-            LCD_Clear();
-            LCD_vidWriteString((u8*)"Sensors found:");
-            LCD_vidGotoxy(0, 1);
-            LCD_vidWriteNumber(sensors_found);
-            LCD_vidWriteString((u8*)" of 5");
-            
-            if (sensors_found > 0) {
-                _delay_ms(2000);
-                
-                // Initialize the complete smart glove system
-                LCD_Clear();
-                LCD_vidWriteString((u8*)"Init SmartGlove");
-                LCD_vidGotoxy(0, 1);
-                LCD_vidWriteString((u8*)"System...");
-                
-                mux_status = TCA9548A_InitializeSmartGloveSystem();
-                
-                if (mux_status == TCA9548A_OK) {
-                    LCD_vidGotoxy(0, 1);
-                    LCD_vidWriteString((u8*)"System: Ready!");
-                    UART_voidSendString("Smart Glove System initialized successfully!\r\n");
-                } else {
-                    LCD_vidGotoxy(0, 1);
-                    LCD_vidWriteString((u8*)"System: Error!");
-                    UART_voidSendString("Smart Glove System initialization failed!\r\n");
-                }
+        u8 who_am_i;
+        status = TCA9548A_ReadRegister(channel, 0x68, 0x75, &who_am_i);
+        
+        if (status == TCA9548A_OK && who_am_i == 0x68) {
+            UART_voidSendString(": MPU6050 found (WHO_AM_I=0x");
+            if (who_am_i >= 0x10) {
+                UART_voidSendNumber(who_am_i >> 4);
+            } else {
+                UART_voidSendString("0");
             }
+            UART_voidSendNumber(who_am_i & 0x0F);
+            UART_voidSendString(")\r\n");
         } else {
-            LCD_vidGotoxy(0, 1);
-            LCD_vidWriteString((u8*)"Comm: FAILED   ");
-            UART_voidSendString("TCA9548A communication test failed!\r\n");
+            UART_voidSendString(": No MPU6050 found or communication error\r\n");
         }
-    } else {
-        LCD_vidGotoxy(0, 1);
-        LCD_vidWriteString((u8*)"TCA9548A: ERROR");
-        UART_voidSendString("TCA9548A initialization failed! Status: ");
-        UART_voidSendString((u8*)TCA9548A_GetStatusString(mux_status));
-        UART_voidSendString("\r\n");
     }
     
-    _delay_ms(3000);
+    UART_voidSendString("Sensor scan complete. Found ");
+    UART_voidSendNumber(sensors_found);
+    UART_voidSendString(" sensors.\r\n");
     
-    // Main loop - demonstrate channel switching
-    u8 current_channel = 0;
+    // Disable all channels after testing
+    TCA9548A_DisableAllChannels();
+
+    LCD_Clear();
+    LCD_vidWriteString((u8*)"Sensors Found:");
+    LCD_vidWriteNumber(sensors_found);
+    LCD_vidWriteString((u8*)"/5");
+    _delay_ms(2000);
+
+    // Simple test - just show we're ready
+    LCD_Clear();
+    LCD_vidWriteString((u8*)"Streaming to PC");
+    LCD_vidGotoxy(0, 1);
+    LCD_vidWriteString((u8*)"Check Serial...");
+    _delay_ms(2000);  // Give even more time
     
     while(1) {
-        if (mux_status == TCA9548A_OK && sensors_found > 0) {
-            // Cycle through available channels
-            LCD_Clear();
-            LCD_vidWriteString((u8*)"Active Channel:");
-            LCD_vidGotoxy(0, 1);
-            LCD_vidWriteNumber(current_channel);
+        LCD_Clear();
+        
+        // Read sensor data from all 5 sensors
+        for(int sensor_id = 0; sensor_id < 5; sensor_id++) {
+            // Read accelerometer and gyroscope data
+            MPU6050_voidReadAccel(sensor_id, &s16AccelX, &s16AccelY, &s16AccelZ);
+            MPU6050_voidReadGyro(sensor_id, &s16GyroX, &s16GyroY, &s16GyroZ);
             
-            // Select channel
-            TCA9548A_SelectChannel(current_channel);
+            // Send live data to laptop in CSV format
+            UART_voidSendString("S");
+            UART_voidSendNumber(sensor_id);
+            UART_voidSendString(":AX=");
+            UART_voidSendNumber(s16AccelX);
+            UART_voidSendString(",AY=");
+            UART_voidSendNumber(s16AccelY);
+            UART_voidSendString(",AZ=");
+            UART_voidSendNumber(s16AccelZ);
+            UART_voidSendString(",GX=");
+            UART_voidSendNumber(s16GyroX);
+            UART_voidSendString(",GY=");
+            UART_voidSendNumber(s16GyroY);
+            UART_voidSendString(",GZ=");
+            UART_voidSendNumber(s16GyroZ);
+            UART_voidSendString(";");
             
-            // Show which finger this represents
-            LCD_vidWriteString((u8*)" - ");
-            switch(current_channel) {
-                case 0: LCD_vidWriteString((u8*)"Thumb"); break;
-                case 1: LCD_vidWriteString((u8*)"Index"); break;
-                case 2: LCD_vidWriteString((u8*)"Middle"); break;
-                case 3: LCD_vidWriteString((u8*)"Ring"); break;
-                case 4: LCD_vidWriteString((u8*)"Palm"); break;
-                default: LCD_vidWriteString((u8*)"N/A"); break;
+            // Display simplified info on LCD for first sensor only
+            if(sensor_id == 0) {
+                LCD_vidGotoxy(0, 0);
+                LCD_vidWriteString((u8*)"S0 AX:");
+                LCD_vidWriteSignedNumber(s16AccelX / 1000);
+                LCD_vidWriteString((u8*)" AY:");
+                LCD_vidWriteSignedNumber(s16AccelY / 1000);
+                
+                LCD_vidGotoxy(0, 1);
+                LCD_vidWriteString((u8*)"AZ:");
+                LCD_vidWriteSignedNumber(s16AccelZ / 1000);
+                LCD_vidWriteString((u8*)" GZ:");
+                LCD_vidWriteSignedNumber(s16GyroZ / 1000);
             }
-            
-            // Send channel info via UART
-            UART_voidSendString("Selected Channel ");
-            UART_voidSendNumber(current_channel);
-            UART_voidSendString("\r\n");
-            
-            // Move to next channel
-            current_channel++;
-            if (current_channel >= 5) {
-                current_channel = 0;
-            }
-            
-        } else {
-            // Error state - just blink
-            LCD_Clear();
-            LCD_vidWriteString((u8*)"System Error");
-            LCD_vidGotoxy(0, 1);
-            LCD_vidWriteString((u8*)"Check Hardware");
-            _delay_ms(500);
-            
-            LCD_Clear();
-            _delay_ms(500);
         }
         
-        _delay_ms(2000);
+        UART_voidSendString("\r\n");  // End of line for CSV
+        _delay_ms(200);  // Faster updates for live streaming
     }
     
     return 0;
