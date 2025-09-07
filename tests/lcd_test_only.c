@@ -1,9 +1,8 @@
-#include "STD_TYPES.h"
-#include "BIT_MATH.h"
-#include "DIO_Interface.h"
-#include "LCD_Interface.h"
+#include "../src/LIB/STD_TYPES.h"
+#include "../src/LIB/BIT_MATH.h"
+#include "../src/MCAL/DIO/DIO_Interface.h"
+#include "../src/HAL/LCD/LCD_Interface.h"
 #include <util/delay.h>
-
 int main(void) {
     u16 counter = 0;
     
