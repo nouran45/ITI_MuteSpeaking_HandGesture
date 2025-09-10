@@ -1,0 +1,116 @@
+# ===== Windows Makefile for ATmega32 Smart Glove Project =====
+# Requirements: 
+#   - WinAVR, Arduino IDE, or MSYS2 with AVR toolchain
+#   - Make sure avr-gcc is in your PATH
+
+# ===== Project Configuration =====
+TARGET = firmware
+MCU = atmega32
+F_CPU = 8000000UL
+
+# ===== Toolchain (Windows) =====
+CC = avr-gcc
+OBJCOPY = avr-objcopy
+SIZE = avr-size
+AVRDUDE = avrdude
+
+# Windows-specific paths (uncomment and modify if needed):
+# CC = "C:\Program Files (x86)\Arduino\hardware\tools\avr\bin\avr-gcc.exe"
+# OBJCOPY = "C:\Program Files (x86)\Arduino\hardware\tools\avr\bin\avr-objcopy.exe" 
+# SIZE = "C:\Program Files (x86)\Arduino\hardware\tools\avr\bin\avr-size.exe"
+# AVRDUDE = "C:\Program Files (x86)\Arduino\hardware\tools\avr\bin\avrdude.exe"
+
+# ===== Source Files =====
+SOURCES = \
+	src/APP/main.c \
+	src/HAL/LCD/LCD_Program.c \
+	src/HAL/MPU6050/MPU6050_Program.c \
+	src/HAL/TCA9548A/TCA9548A_Integration.c \
+	src/HAL/TCA9548A/TCA9548A_Program.c \
+	src/MCAL/DIO/DIO_PROGRAM.c \
+	src/MCAL/I2C/i2c_helpers.c \
+	src/MCAL/I2C/I2C_Program.c \
+	src/MCAL/UART/UART_Program.c
+
+# ===== Object Files =====
+OBJECTS = $(SOURCES:.c=.o)
+
+# ===== Include Directories =====
+INCLUDES = -I. -Iinclude -Isrc -Isrc/APP -Isrc/HAL -Isrc/MCAL -Isrc/LIB -Isrc/HAL/LCD -Isrc/HAL/MPU6050 -Isrc/HAL/TCA9548A -Isrc/MCAL/DIO -Isrc/MCAL/I2C -Isrc/MCAL/UART
+
+# ===== Compiler Flags =====
+CFLAGS = -std=gnu99 -Os -mmcu=$(MCU) -DF_CPU=$(F_CPU) $(INCLUDES) -Wall -Wextra -ffunction-sections -fdata-sections
+LDFLAGS = -mmcu=$(MCU) -Wl,--gc-sections
+LDLIBS = -lm
+
+# ===== Programmer Settings =====
+PROGRAMMER = usbasp
+# For Arduino as ISP on COM port, use:
+# PROGRAMMER = arduino
+# PORT = COM3
+# BAUD = 57600
+
+AVRDUDE_FLAGS = -p m32 -c $(PROGRAMMER)
+ifdef PORT
+AVRDUDE_FLAGS += -P $(PORT)
+endif
+ifdef BAUD  
+AVRDUDE_FLAGS += -b $(BAUD)
+endif
+
+# ===== Build Targets =====
+all: $(TARGET).hex size
+
+$(TARGET).hex: $(TARGET).elf
+	@echo Creating hex file...
+	$(OBJCOPY) -O ihex -R .eeprom $(TARGET).elf $(TARGET).hex
+	@echo Done: $(TARGET).hex
+
+$(TARGET).elf: $(OBJECTS)
+	@echo Linking...
+	$(CC) $(LDFLAGS) $(OBJECTS) -o $(TARGET).elf $(LDLIBS)
+
+%.o: %.c
+	@echo Compiling: $<
+	$(CC) $(CFLAGS) -c $< -o $@
+
+size: $(TARGET).elf
+	@echo ===== Memory Usage =====
+	$(SIZE) -C --mcu=$(MCU) $(TARGET).elf
+
+flash: $(TARGET).hex
+	@echo Flashing firmware to ATmega32...
+	$(AVRDUDE) $(AVRDUDE_FLAGS) -U flash:w:$(TARGET).hex:i
+	@echo Flash complete!
+
+clean:
+	@echo Cleaning build files...
+	-del /Q $(subst /,\,$(OBJECTS)) 2>NUL
+	-del /Q $(TARGET).elf 2>NUL  
+	-del /Q $(TARGET).hex 2>NUL
+	@echo Clean complete.
+
+# ===== Test Targets =====
+test-build:
+	@echo Testing build process...
+	$(MAKE) clean
+	$(MAKE) all
+	@echo Build test passed!
+
+help:
+	@echo "===== ATmega32 Smart Glove Project (Windows) ====="
+	@echo "Available commands:"
+	@echo "  make -f Makefile.windows all     - Build the firmware"
+	@echo "  make -f Makefile.windows flash   - Upload to microcontroller"
+	@echo "  make -f Makefile.windows clean   - Remove build files"
+	@echo "  make -f Makefile.windows size    - Show memory usage"
+	@echo "  make -f Makefile.windows help    - Show this help"
+	@echo "Requirements:"
+	@echo "  - Arduino IDE or WinAVR with AVR toolchain"
+	@echo "  - avr-gcc, avr-objcopy, avr-size in PATH"
+	@echo "Current settings:"
+	@echo "  MCU: $(MCU)"
+	@echo "  Clock: $(F_CPU)"
+	@echo "  Programmer: $(PROGRAMMER)"
+
+.PHONY: all flash clean size help test-build

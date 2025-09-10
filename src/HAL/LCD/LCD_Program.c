@@ -1,9 +1,9 @@
-#include "../../LIB/STD_TYPES.h"
-#include "../../LIB/BIT_MATH.h"
-#include "../../MCAL/DIO/DIO_Interface.h"
+#include "STD_TYPES.h"
+#include "BIT_MATH.h"
+#include "DIO_Interface.h"
 #include "LCD_Config.h"
 #include "LCD_Interface.h"
-#include "../../MCAL/DIO/DIO_Register.h"
+#include "DIO_Register.h"
 #include <util/delay.h>
 #include <stdio.h>  // For sprintf function
 
@@ -149,6 +149,12 @@ void LCD_vidWriteNumber_8bits(u16 Copy_u16Number)
         i--;
         LCD_vidWriteCharctr(buffer[i]);
     }
+}
+
+// Add missing LCD_vidWriteNumber function (wrapper for compatibility)
+void LCD_vidWriteNumber(u16 Copy_u16Number)
+{
+    LCD_vidWriteNumber_8bits(Copy_u16Number);
 }
 
 

@@ -1,5 +1,5 @@
-#include "../../LIB/STD_TYPES.h"
-#include "../../LIB/BIT_MATH.h"
+#include "STD_TYPES.h"
+#include "BIT_MATH.h"
 #include "TCA9548A_Interface.h"
 #include "TCA9548A_Config.h"
 #include "../../MCAL/I2C/i2c_helpers.h"
@@ -135,10 +135,7 @@ TCA9548A_Status_t TCA9548A_SelectMultipleChannels(u8 u8ChannelMask) {
         return TCA9548A_ERROR_NOT_INITIALIZED;
     }
     
-    // Validate that the mask doesn't exceed available channels
-    if (u8ChannelMask > 0xFF) {
-        return TCA9548A_ERROR_INVALID_CHANNEL;
-    }
+    // Note: u8 parameter can never exceed 0xFF, so no validation needed
     
     TCA9548A_Status_t status = write_channel_register(u8ChannelMask);
     if (status == TCA9548A_OK) {

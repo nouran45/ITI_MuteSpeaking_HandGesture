@@ -1,10 +1,10 @@
-#include "../../LIB/STD_TYPES.h"
-#include "../../LIB/BIT_MATH.h"
+#include "STD_TYPES.h"
+#include "BIT_MATH.h"
 #include "MPU6050_Interface.h"
 #include "MPU6050_Config.h"
 #include "mpu6050_types.h"
 #include "../../MCAL/I2C/i2c_helpers.h"
-#include "../../MCAL/UART/UART_Interface.h" // optional for logs
+#include "UART_Interface.h" // optional for logs
 #include <math.h>
 
 
@@ -68,9 +68,13 @@ mpu6050_status_t MPU6050_readAll(u8 id, s16* ax, s16* ay, s16* az,
     const mpu6050_dev_t* d = &g_sensors[id].dev;
     s16 AX=be16(b+0), AY=be16(b+2), AZ=be16(b+4);
     s16 TT=be16(b+6), GX=be16(b+8), GY=be16(b+10), GZ=be16(b+12);
-    if(ax) *ax = AX - d->ax_off; if(ay) *ay = AY - d->ay_off; if(az) *az = AZ - d->az_off;
+    if(ax) *ax = AX - d->ax_off; 
+    if(ay) *ay = AY - d->ay_off; 
+    if(az) *az = AZ - d->az_off;
     if(t ) *t  = TT;
-    if(gx) *gx = GX - d->gx_off; if(gy) *gy = GY - d->gy_off; if(gz) *gz = GZ - d->gz_off;
+    if(gx) *gx = GX - d->gx_off; 
+    if(gy) *gy = GY - d->gy_off; 
+    if(gz) *gz = GZ - d->gz_off;
     return MPU6050_OK;
 }
 

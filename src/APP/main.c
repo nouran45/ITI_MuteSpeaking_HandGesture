@@ -1,13 +1,13 @@
-#include "../LIB/STD_TYPES.h"
-#include "../LIB/BIT_MATH.h"
-#include "../MCAL/DIO/DIO_Interface.h"
-#include "../HAL/LCD/LCD_Interface.h"
-#include "../MCAL/I2C/I2C_Interface.h"
-#include "../HAL/MPU6050/MPU6050_Interface.h"
-#include "../MCAL/UART/UART_Interface.h"
-#include "../MCAL/DIO/DIO_Register.h"
-#include "../HAL/TCA9548A/TCA9548A_Interface.h"
-#include "../HAL/TCA9548A/TCA9548A_Integration.h"
+#include "STD_TYPES.h"
+#include "BIT_MATH.h"
+#include "DIO_Interface.h"
+#include "LCD_Interface.h"
+#include "I2C_Interface.h"
+#include "MPU6050_Interface.h"
+#include "UART_Interface.h"
+#include "DIO_Register.h"
+#include "TCA9548A_Interface.h"
+#include "TCA9548A_Integration.h"
 #include <util/delay.h>
 #include <stdio.h>
 

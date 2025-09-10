@@ -7,7 +7,7 @@
 
 
 #include <avr/io.h>
-#include "../../LIB/STD_TYPES.h"
+#include "STD_TYPES.h"
 #include "i2c_helpers.h"
 
 // ---- Internal utilities -------------------------------------------------

@@ -1,7 +1,7 @@
 #ifndef MPU6050_INTERFACE_H
 #define MPU6050_INTERFACE_H
 
-#include "../../LIB/STD_TYPES.h"
+#include "STD_TYPES.h"
 #include "mpu6050_types.h"
 #include "MPU6050_Config.h"
 
@@ -12,6 +12,7 @@
 void MPU6050_setMuxSelector(mpu_mux_select_fn fn);
 
 /* ---------- Registration / init ---------- */
+void              MPU6050_voidInit(void);          // Legacy single-sensor init (sensor 0)
 void              MPU6050_registerSensor(u8 id, const mpu6050_dev_t* cfg);
 mpu6050_status_t  MPU6050_initSensor(u8 id);
 void              MPU6050_initAllSensors(void);

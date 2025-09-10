@@ -1,0 +1,189 @@
+# ===== Cross-Platform Makefile for ATmega32 Project =====
+# Works on both Linux and Windows
+# For Windows: Use MSYS2, MinGW, or Git Bash
+
+# ===== Project Configuration =====
+TARGET := firmware
+MCU    := atmega32
+F_CPU  := 8000000UL
+
+# ===== Auto-detect Operating System =====
+ifeq ($(OS),Windows_NT)
+    # Windows-specific settings
+    SHELL := cmd.exe
+    RM := del /Q /F
+    RMDIR := rmdir /S /Q
+    MKDIR := mkdir
+    NULLDEV := NUL
+    EXE_EXT := .exe
+    PATH_SEP := \\
+else
+    # Linux/Unix-specific settings  
+    RM := rm -f
+    RMDIR := rm -rf
+    MKDIR := mkdir -p
+    NULLDEV := /dev/null
+    EXE_EXT :=
+    PATH_SEP := /
+endif
+
+# ===== Toolchain =====
+# Try to auto-detect AVR toolchain location
+CC      := avr-gcc$(EXE_EXT)
+OBJCOPY := avr-objcopy$(EXE_EXT)
+SIZE    := avr-size$(EXE_EXT)
+AVRDUDE := avrdude$(EXE_EXT)
+
+# Alternative Windows paths (uncomment if needed)
+# CC      := "C:\Program Files (x86)\Arduino\hardware\tools\avr\bin\avr-gcc.exe"
+# OBJCOPY := "C:\Program Files (x86)\Arduino\hardware\tools\avr\bin\avr-objcopy.exe"
+# SIZE    := "C:\Program Files (x86)\Arduino\hardware\tools\avr\bin\avr-size.exe"
+# AVRDUDE := "C:\Program Files (x86)\Arduino\hardware\tools\avr\bin\avrdude.exe"
+
+# ===== Sources =====
+SRC := \
+  $(wildcard src/*.c) \
+  $(wildcard src/*/*.c) \
+  $(wildcard src/*/*/*.c)
+
+# ===== Include Directories =====
+INC_DIRS := \
+  . \
+  include \
+  src \
+  src/APP \
+  src/HAL \
+  src/MCAL \
+  src/LIB \
+  src/HAL/LCD \
+  src/HAL/MPU6050 \
+  src/HAL/TCA9548A \
+  src/MCAL/DIO \
+  src/MCAL/I2C \
+  src/MCAL/UART
+
+INC := $(addprefix -I,$(INC_DIRS))
+
+# ===== Compiler Flags =====
+CFLAGS  := -std=gnu99 -Os -mmcu=$(MCU) -DF_CPU=$(F_CPU) $(INC) 
+CFLAGS  += -Wall -Wextra -ffunction-sections -fdata-sections
+LDFLAGS := -mmcu=$(MCU) -Wl,--gc-sections
+LDLIBS  := -lm
+
+# ===== Programmer Configuration =====
+PROGRAMMER := usbasp
+PORT       :=
+BAUD       :=
+
+AVRDUDE_FLAGS := -p m32 -c $(PROGRAMMER)
+ifneq ($(PORT),)
+  AVRDUDE_FLAGS += -P $(PORT)
+endif
+ifneq ($(BAUD),)
+  AVRDUDE_FLAGS += -b $(BAUD)
+endif
+
+# Windows-specific programmer settings (uncomment if needed)
+# PROGRAMMER := arduino
+# PORT       := COM3
+# BAUD       := 57600
+
+# ===== Output Files =====
+OBJ := $(SRC:.c=.o)
+ELF := $(TARGET).elf
+HEX := $(TARGET).hex
+
+# ===== Build Rules =====
+.PHONY: all flash clean test help
+
+all: $(HEX) size
+
+$(HEX): $(ELF)
+	@echo Creating hex file: $(HEX)
+	$(OBJCOPY) -O ihex -R .eeprom $< $@
+
+$(ELF): $(OBJ)
+	@echo Linking: $(ELF)
+	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
+
+%.o: %.c
+	@echo Compiling: $<
+	$(CC) $(CFLAGS) -c $< -o $@
+
+size: $(ELF)
+	@echo.
+	@echo ===== Memory Usage =====
+	$(SIZE) -C --mcu=$(MCU) $(ELF)
+
+flash: $(HEX)
+	@echo Flashing $(HEX) to $(MCU)...
+	$(AVRDUDE) $(AVRDUDE_FLAGS) -U flash:w:$(HEX):i
+
+# ===== Clean Rules =====
+ifeq ($(OS),Windows_NT)
+clean:
+	@echo Cleaning Windows build files...
+	-$(RM) $(subst /,\,$(OBJ)) 2>$(NULLDEV)
+	-$(RM) $(ELF) 2>$(NULLDEV)
+	-$(RM) $(HEX) 2>$(NULLDEV)
+	@echo Clean complete.
+else
+clean:
+	@echo Cleaning Linux build files...
+	-$(RM) $(OBJ) $(ELF) $(HEX)
+	@echo Clean complete.
+endif
+
+# ===== Test Rules =====
+test-lcd:
+ifeq ($(OS),Windows_NT)
+	$(MAKE) -C tests -f Makefile.windows lcd_test_only
+else
+	$(MAKE) -C tests lcd_test_only  
+endif
+
+test-diagnostic:
+ifeq ($(OS),Windows_NT)
+	$(MAKE) -C tests -f Makefile.windows LCD_diagnostic
+else
+	$(MAKE) -C tests LCD_diagnostic
+endif
+
+# ===== Utility Rules =====
+help:
+	@echo.
+	@echo ===== ATmega32 Smart Glove Project =====
+	@echo Available targets:
+	@echo   all        - Build the main firmware (default)
+	@echo   flash      - Upload firmware to microcontroller
+	@echo   clean      - Remove all build files
+	@echo   size       - Show memory usage
+	@echo   test-lcd   - Build and flash LCD test
+	@echo   help       - Show this help message
+	@echo.
+	@echo Programmer: $(PROGRAMMER)
+	@echo MCU: $(MCU) @ $(F_CPU)
+	@echo.
+
+info:
+	@echo ===== Build Information =====
+	@echo Target: $(TARGET)
+	@echo MCU: $(MCU)
+	@echo F_CPU: $(F_CPU)
+	@echo Compiler: $(CC)
+	@echo Sources: $(SRC)
+	@echo Objects: $(OBJ)
+	@echo Programmer: $(PROGRAMMER)
+ifeq ($(OS),Windows_NT)
+	@echo OS: Windows  
+else
+	@echo OS: Linux/Unix
+endif
+	@echo.
+
+# ===== Dependencies =====
+# Auto-generate dependencies
+-include $(OBJ:.o=.d)
+
+%.d: %.c
+	@$(CC) $(CFLAGS) -MM -MT $(@:.d=.o) $< > $@

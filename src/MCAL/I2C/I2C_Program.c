@@ -1,5 +1,5 @@
-#include "../../LIB/STD_TYPES.h"
-#include "../../LIB/BIT_MATH.h"
+#include "STD_TYPES.h"
+#include "BIT_MATH.h"
 #include "I2C_Interface.h"
 #include "I2C_Config.h"
 #include "../DIO/DIO_Register.h"  // For port registers

@@ -8,7 +8,7 @@
 #ifndef I2C_HELPERS_H
 #define I2C_HELPERS_H
 
-#include "../../LIB/STD_TYPES.h"
+#include "STD_TYPES.h"
 #include <stdint.h>
 /**
  * Initialise AVR TWI (I2C) for a target bus speed (Hz).

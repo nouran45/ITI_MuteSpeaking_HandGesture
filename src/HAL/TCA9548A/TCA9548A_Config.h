@@ -1,7 +1,7 @@
 #ifndef TCA9548A_CONFIG_H
 #define TCA9548A_CONFIG_H
 
-#include "../../LIB/STD_TYPES.h"
+#include "STD_TYPES.h"
 
 // TCA9548A I2C Address (7-bit)
 // Hardware address pins A2=0, A1=0, A0=0 -> Address = 0x70

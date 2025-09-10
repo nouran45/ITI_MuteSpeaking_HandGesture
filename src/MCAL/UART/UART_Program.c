@@ -1,5 +1,5 @@
-#include "../../LIB/STD_TYPES.h"
-#include "../../LIB/BIT_MATH.h"
+#include "STD_TYPES.h"
+#include "BIT_MATH.h"
 #include "UART_Interface.h"
 #include "../DIO/DIO_Register.h"
 

@@ -1,7 +1,7 @@
 #ifndef TCA9548A_INTEGRATION_H
 #define TCA9548A_INTEGRATION_H
 
-#include "../../LIB/STD_TYPES.h"
+#include "STD_TYPES.h"
 #include "TCA9548A_Interface.h"
 
 /**
