@@ -78,6 +78,12 @@ mpu6050_status_t MPU6050_readAll(u8 id, s16* ax, s16* ay, s16* az,
     return MPU6050_OK;
 }
 
+mpu6050_status_t MPU6050_readSensorData(u8 id, mpu6050_raw_data_t* data) {
+    if (!data) return MPU6050_E_I2C;
+    return MPU6050_readAll(id, &data->ax, &data->ay, &data->az, 
+                          &data->temp, &data->gx, &data->gy, &data->gz);
+}
+
 void MPU6050_voidReadAccel(u8 id, s16* ax, s16* ay, s16* az){
     (void)MPU6050_readAll(id, ax, ay, az, 0, 0, 0, 0);
 }

@@ -29,8 +29,13 @@ void UART_voidSendByte(u8 u8Data) {
     UDR = u8Data;
 }
 
+// Send single character (alias for SendByte)
+void UART_voidSendChar(char c) {
+    UART_voidSendByte((u8)c);
+}
+
 // Send string
-void UART_voidSendString(char* str) {
+void UART_voidSendString(const char* str) {
     while (*str) {
         UART_voidSendByte(*str);
         str++;

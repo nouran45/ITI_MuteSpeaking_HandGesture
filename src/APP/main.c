@@ -1,14 +1,13 @@
-#include "../LIB/STD_TYPES.h"
-#include "../LIB/BIT_MATH.h"
-#include "../MCAL/DIO/DIO_Interface.h"
-#include "../HAL/LCD/LCD_Interface.h"
-#include "../MCAL/I2C/I2C_Interface.h"
-#include "../HAL/MPU6050/MPU6050_Interface.h"
-#include "../MCAL/UART/UART_Interface.h"
-#include "../MCAL/DIO/DIO_Register.h"
-#include "../MCAL/I2C/i2c_helpers.h"
-#include "../HAL/TCA9548A/TCA9548A_Interface.h"
-#include "../HAL/TCA9548A/TCA9548A_Integration.h"
+#include "STD_TYPES.h"
+#include "BIT_MATH.h"
+#include "DIO_Interface.h"
+#include "LCD_Interface.h"
+#include "I2C_Interface.h"
+#include "MPU6050_Interface.h"
+#include "UART_Interface.h"
+#include "DIO_Register.h"
+#include "TCA9548A_Interface.h"
+#include "TCA9548A_Integration.h"
 #include <util/delay.h>
 #include <stdio.h>
 
@@ -57,8 +56,46 @@ int main(void) {
     // Initialize TCA9548A multiplexer
     LCD_vidGotoxy(0, 1);
     LCD_vidWriteString((u8*)"MUX Init...");
-    TCA9548A_Init();
+    TCA9548A_Status_t mux_status = TCA9548A_Init();
     _delay_ms(500);
+    
+    if (mux_status != TCA9548A_OK) {
+        LCD_vidGotoxy(0, 1);
+        LCD_vidWriteString((u8*)"MUX: FAILED!");
+        UART_voidSendString("TCA9548A Init FAILED! Status: ");
+        UART_voidSendNumber(mux_status);
+        UART_voidSendString("\r\n");
+        UART_voidSendString("Attempting recovery...\r\n");
+        
+        // Attempt recovery 3 times
+        for (u8 retry = 0; retry < 3; retry++) {
+            _delay_ms(1000);
+            LCD_vidGotoxy(0, 1);
+            LCD_vidWriteString((u8*)"Retry MUX...");
+            mux_status = TCA9548A_Init();
+            if (mux_status == TCA9548A_OK) {
+                LCD_vidGotoxy(0, 1);
+                LCD_vidWriteString((u8*)"MUX: Recovered!");
+                UART_voidSendString("TCA9548A Recovery successful!\r\n");
+                break;
+            }
+        }
+        
+        if (mux_status != TCA9548A_OK) {
+            LCD_vidGotoxy(0, 1);
+            LCD_vidWriteString((u8*)"MUX: CRITICAL!");
+            UART_voidSendString("TCA9548A CRITICAL FAILURE - Cannot continue\r\n");
+            while(1) {
+                // Flash error indication
+                LCD_vidGotoxy(0, 1);
+                LCD_vidWriteString((u8*)"SYSTEM HALTED  ");
+                _delay_ms(500);
+                LCD_vidGotoxy(0, 1);
+                LCD_vidWriteString((u8*)"              ");
+                _delay_ms(500);
+            }
+        }
+    }
     
     LCD_vidGotoxy(0, 1);
     LCD_vidWriteString((u8*)"MUX: OK     ");
@@ -95,12 +132,17 @@ int main(void) {
         UART_voidSendString("Channel ");
         UART_voidSendNumber(channel);
         
-        // Test each channel individually to see which ones work
-        TCA9548A_Status_t status = TCA9548A_SelectChannel(channel);
-        _delay_ms(10);
+        // First select the channel
+        TCA9548A_Status_t select_status = TCA9548A_SelectChannel(channel);
+        if (select_status != TCA9548A_OK) {
+            UART_voidSendString(": Channel select failed\r\n");
+            continue;
+        }
         
-        u8 who_am_i;
-        status = TCA9548A_ReadRegister(channel, 0x68, 0x75, &who_am_i);
+        u8 who_am_i = 0;
+        // Use I2C helpers directly since channel is already selected
+        u8 i2c_status = I2C_u8ReadRegs(0x68, 0x75, &who_am_i, 1);
+        TCA9548A_Status_t status = (i2c_status == 0) ? TCA9548A_OK : TCA9548A_ERROR_I2C;
         
         if (status == TCA9548A_OK && who_am_i == 0x68) {
             UART_voidSendString(": MPU6050 found (WHO_AM_I=0x");
@@ -138,47 +180,73 @@ int main(void) {
     
     while(1) {
         LCD_Clear();
+        u8 successful_reads = 0;
         
         // Read sensor data from all 5 sensors
         for(int sensor_id = 0; sensor_id < 5; sensor_id++) {
-            // Read accelerometer and gyroscope data
-            MPU6050_voidReadAccel(sensor_id, &s16AccelX, &s16AccelY, &s16AccelZ);
-            MPU6050_voidReadGyro(sensor_id, &s16GyroX, &s16GyroY, &s16GyroZ);
+            // Initialize with error values
+            s16AccelX = 0xFFFF; s16AccelY = 0xFFFF; s16AccelZ = 0xFFFF;
+            s16GyroX = 0xFFFF; s16GyroY = 0xFFFF; s16GyroZ = 0xFFFF;
             
-            // Send live data to laptop in CSV format
-            UART_voidSendString("S");
-            UART_voidSendNumber(sensor_id);
-            UART_voidSendString(":AX=");
-            UART_voidSendNumber(s16AccelX);
-            UART_voidSendString(",AY=");
-            UART_voidSendNumber(s16AccelY);
-            UART_voidSendString(",AZ=");
-            UART_voidSendNumber(s16AccelZ);
-            UART_voidSendString(",GX=");
-            UART_voidSendNumber(s16GyroX);
-            UART_voidSendString(",GY=");
-            UART_voidSendNumber(s16GyroY);
-            UART_voidSendString(",GZ=");
-            UART_voidSendNumber(s16GyroZ);
-            UART_voidSendString(";");
+            // Try to read accelerometer and gyroscope data with error checking
+            mpu6050_status_t accel_status = MPU6050_readAll(sensor_id, 
+                &s16AccelX, &s16AccelY, &s16AccelZ, NULL, 
+                &s16GyroX, &s16GyroY, &s16GyroZ);
             
-            // Display simplified info on LCD for first sensor only
-            if(sensor_id == 0) {
-                LCD_vidGotoxy(0, 0);
-                LCD_vidWriteString((u8*)"S0 AX:");
-                LCD_vidWriteSignedNumber(s16AccelX / 1000);
-                LCD_vidWriteString((u8*)" AY:");
-                LCD_vidWriteSignedNumber(s16AccelY / 1000);
+            if (accel_status == MPU6050_OK) {
+                successful_reads++;
+                // Send live data to laptop in CSV format
+                UART_voidSendString("S");
+                UART_voidSendNumber(sensor_id);
+                UART_voidSendString(":AX=");
+                UART_voidSendNumber(s16AccelX);
+                UART_voidSendString(",AY=");
+                UART_voidSendNumber(s16AccelY);
+                UART_voidSendString(",AZ=");
+                UART_voidSendNumber(s16AccelZ);
+                UART_voidSendString(",GX=");
+                UART_voidSendNumber(s16GyroX);
+                UART_voidSendString(",GY=");
+                UART_voidSendNumber(s16GyroY);
+                UART_voidSendString(",GZ=");
+                UART_voidSendNumber(s16GyroZ);
+                UART_voidSendString(";");
                 
-                LCD_vidGotoxy(0, 1);
-                LCD_vidWriteString((u8*)"AZ:");
-                LCD_vidWriteSignedNumber(s16AccelZ / 1000);
-                LCD_vidWriteString((u8*)" GZ:");
-                LCD_vidWriteSignedNumber(s16GyroZ / 1000);
+                // Display simplified info on LCD for first sensor only
+                if(sensor_id == 0) {
+                    LCD_vidGotoxy(0, 0);
+                    LCD_vidWriteString((u8*)"S0 AX:");
+                    LCD_vidWriteSignedNumber(s16AccelX / 1000);
+                    LCD_vidWriteString((u8*)" AY:");
+                    LCD_vidWriteSignedNumber(s16AccelY / 1000);
+                    
+                    LCD_vidGotoxy(0, 1);
+                    LCD_vidWriteString((u8*)"AZ:");
+                    LCD_vidWriteSignedNumber(s16AccelZ / 1000);
+                    LCD_vidWriteString((u8*)" GZ:");
+                    LCD_vidWriteSignedNumber(s16GyroZ / 1000);
+                }
+            } else {
+                // Send error indicator for failed sensor
+                UART_voidSendString("S");
+                UART_voidSendNumber(sensor_id);
+                UART_voidSendString(":ERROR;");
+                
+                // Show error on LCD for first sensor
+                if(sensor_id == 0) {
+                    LCD_vidGotoxy(0, 0);
+                    LCD_vidWriteString((u8*)"S0: READ ERROR");
+                    LCD_vidGotoxy(0, 1);
+                    LCD_vidWriteString((u8*)"Status: ");
+                    LCD_vidWriteNumber(accel_status);
+                }
             }
         }
         
-        UART_voidSendString("\r\n");  // End of line for CSV
+        // Add success rate to UART output
+        UART_voidSendString("OK:");
+        UART_voidSendNumber(successful_reads);
+        UART_voidSendString("/5\r\n");  // End of line for CSV
         _delay_ms(200);  // Faster updates for live streaming
     }
     

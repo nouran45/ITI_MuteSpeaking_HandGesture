@@ -13,6 +13,13 @@ typedef struct {
     s16 gx_off, gy_off, gz_off; // gyro offset (raw LSB)
 } mpu6050_dev_t;
 
+// Raw sensor data structure
+typedef struct {
+    s16 ax, ay, az;  // accelerometer raw values
+    s16 gx, gy, gz;  // gyroscope raw values
+    s16 temp;        // temperature raw value
+} mpu6050_raw_data_t;
+
 typedef enum {
     MPU6050_OK = 0,
     MPU6050_E_I2C = 1,
