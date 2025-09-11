@@ -118,3 +118,35 @@ u8 I2C_u8WriteReg(u8 addr7, u8 reg, u8 val)
     hlp_stop();
     return 0;
 }
+
+/**
+ * Write a single byte directly to an I2C device (no register address).
+ * Used for devices like TCA9548A that don't use register-based communication.
+ * Returns 0 on success, 1 on error.
+ */
+u8 I2C_u8WriteByte(u8 addr7, u8 val)
+{
+    if (hlp_start(SLA(addr7, 0))) return 1;
+    if (hlp_write(val)) return 1;
+    hlp_stop();
+    return 0;
+}
+
+/**
+ * Read a single byte directly from an I2C device (no register address).
+ * Used for devices like TCA9548A that don't use register-based communication.
+ * Returns 0 on success, 1 on error.
+ */
+u8 I2C_u8ReadByte(u8 addr7, u8* val)
+{
+    if (!val) return 1;
+    
+    // START + SLA+R
+    if (hlp_start(SLA(addr7, 1))) return 1;
+    
+    // Read single byte with NACK
+    *val = hlp_readNack();
+    
+    hlp_stop();
+    return 0;
+}

@@ -39,9 +39,9 @@ static TCA9548A_Status_t validate_channel(u8 channel) {
  * @brief Internal function to write channel selection to TCA9548A
  */
 static TCA9548A_Status_t write_channel_register(u8 channel_mask) {
-    // TCA9548A uses a simple write to select channels
-    // The data byte written determines which channels are active
-    if (I2C_u8WriteReg(TCA9548A_I2C_ADDRESS, 0x00, channel_mask)) {
+    // TCA9548A uses a simple write of the channel mask directly to the device
+    // No register address is needed - just send the channel mask byte
+    if (I2C_u8WriteByte(TCA9548A_I2C_ADDRESS, channel_mask)) {
         return TCA9548A_ERROR_I2C;
     }
     
@@ -57,8 +57,9 @@ static TCA9548A_Status_t read_channel_register(u8* channel_mask) {
         return TCA9548A_ERROR_I2C;
     }
     
-    // Read current channel selection
-    if (I2C_u8ReadRegs(TCA9548A_I2C_ADDRESS, 0x00, channel_mask, 1)) {
+    // Read current channel selection directly from TCA9548A
+    // No register address needed - just read one byte
+    if (I2C_u8ReadByte(TCA9548A_I2C_ADDRESS, channel_mask)) {
         return TCA9548A_ERROR_I2C;
     }
     

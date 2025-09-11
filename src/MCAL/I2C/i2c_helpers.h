@@ -33,5 +33,19 @@ u8 I2C_u8ReadRegs(u8 addr7, u8 reg, u8* buf, u8 len);
  */
 u8 I2C_u8WriteReg(u8 addr7, u8 reg, u8 val);
 
+/**
+ * Write a single byte directly to an I2C device (no register address).
+ * Used for devices like TCA9548A that don't use register-based communication.
+ * Returns 0 on success, 1 on error.
+ */
+u8 I2C_u8WriteByte(u8 addr7, u8 val);
+
+/**
+ * Read a single byte directly from an I2C device (no register address).
+ * Used for devices like TCA9548A that don't use register-based communication.
+ * Returns 0 on success, 1 on error.
+ */
+u8 I2C_u8ReadByte(u8 addr7, u8* val);
+
 #endif // I2C_HELPERS_H
 
