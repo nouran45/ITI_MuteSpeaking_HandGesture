@@ -1,8 +1,8 @@
 #ifndef TCA9548A_INTEGRATION_H
 #define TCA9548A_INTEGRATION_H
 
-#include "STD_TYPES.h"
-#include "TCA9548A_Interface.h"
+#include "../../LIB/STD_TYPES.h"
+#include "../src/HAL/TCA9548A/TCA9548A_Interface.h"
 
 /**
  * @brief Callback function for MPU6050 driver to select multiplexer channel

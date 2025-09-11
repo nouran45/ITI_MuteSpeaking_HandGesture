@@ -1,1 +1,1 @@
-../src/HAL/LCD/LCD_Config.h
+#include "../src/HAL/LCD/LCD_Config.h"

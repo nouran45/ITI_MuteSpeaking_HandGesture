@@ -1,7 +1,7 @@
 #ifndef MPU6050_TYPES_H
 #define MPU6050_TYPES_H
 
-#include "STD_TYPES.h"
+#include "../src/LIB/STD_TYPES.h"
 
 // External I2C mux selector (e.g., TCA9548A). Pass 0xFF in dev to disable.
 typedef void (*mpu_mux_select_fn)(u8 channel); //  supplies later

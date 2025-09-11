@@ -1,5 +1,5 @@
-#include "STD_TYPES.h"
-#include "BIT_MATH.h"
+#include "../../LIB/STD_TYPES.h"
+#include "../../LIB/BIT_MATH.h"
 #include "MPU6050_Interface.h"
 #include "MPU6050_Config.h"
 #include "mpu6050_types.h"
@@ -118,4 +118,9 @@ void MPU6050_voidCalibrateAllSensors(void){
     for(u8 i=0;i<MPU6050_MAX_SENSORS;i++){
         if(g_sensors[i].registered) MPU6050_voidCalibrateSensor(i);
     }
+}
+
+mpu6050_status_t MPU6050_readSensorData(u8 id, mpu6050_raw_data_t* data) {
+    if (!data) return MPU6050_E_BADID;
+    return MPU6050_readAll(id, &data->ax, &data->ay, &data->az, &data->temp, &data->gx, &data->gy, &data->gz);
 }

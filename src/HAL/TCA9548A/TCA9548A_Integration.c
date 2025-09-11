@@ -1,10 +1,10 @@
-#include "STD_TYPES.h"
+#include "../../LIB/STD_TYPES.h"
 #include "TCA9548A_Integration.h"
 #include "TCA9548A_Interface.h"
 #include "TCA9548A_Config.h"
-#include "MPU6050_Interface.h"
-#include "mpu6050_types.h"
-#include "UART_Interface.h"
+#include "../MPU6050/MPU6050_Interface.h"
+#include "../MPU6050/mpu6050_types.h"
+#include "../../MCAL/UART/UART_Interface.h"
 #include <util/delay.h>
 
 // MPU6050 I2C address (AD0 = 0, so address = 0x68)

@@ -20,7 +20,11 @@ typedef enum {
     MPU6050_E_BADID  = 3
 } mpu6050_status_t;
 
-
+typedef struct {
+    s16 ax, ay, az; // Accelerometer
+    s16 gx, gy, gz; // Gyroscope
+    s16 temp;       // (optional) Temperature
+} mpu6050_raw_data_t;
 
 
 #endif

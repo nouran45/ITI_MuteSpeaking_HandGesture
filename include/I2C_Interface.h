@@ -1,1 +1,1 @@
-../src/MCAL/I2C/I2C_Interface.h
+#include "../src/MCAL/I2C/I2C_Interface.h"

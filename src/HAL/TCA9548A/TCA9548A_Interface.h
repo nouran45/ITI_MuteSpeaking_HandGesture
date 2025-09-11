@@ -1,7 +1,7 @@
 #ifndef TCA9548A_INTERFACE_H
 #define TCA9548A_INTERFACE_H
 
-#include "STD_TYPES.h"
+#include "../../LIB/STD_TYPES.h"
 #include "TCA9548A_Config.h"
 
 // Status enumeration for TCA9548A operations

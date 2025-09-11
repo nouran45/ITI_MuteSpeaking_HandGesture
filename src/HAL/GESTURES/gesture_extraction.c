@@ -3,11 +3,12 @@
 #include "STD_TYPES.h"
 #include <math.h>
 #include <string.h>
+#include <stdio.h>
 #include "TCA9548A_Interface.h"
 #include "TCA9548A_Integration.h"
 #include "MPU6050_Interface.h"
 #include "../HAL/MPU6050/mpu6050_types.h"
-#include "../MCAL/UART/UART_Interface.h"
+#include "UART_Interface.h"
 
 // Global gesture buffer
 static gesture_buffer_t g_gesture_buffer;

@@ -1,11 +1,13 @@
-#include "STD_TYPES.h"
-#include "BIT_MATH.h"
-#include "DIO_Interface.h"
+#include "../../LIB/STD_TYPES.h"
+#include "../../LIB/BIT_MATH.h"
+#include "../../MCAL/DIO/DIO_Interface.h"
 #include "LCD_Config.h"
 #include "LCD_Interface.h"
-#include "DIO_Register.h"
+#include "../../MCAL/DIO/DIO_Register.h"
 #include <util/delay.h>
 #include <stdio.h>  // For sprintf function
+
+
 
 // 4-bit mode LCD initialization - frees up PC0 for I2C
 void LCD_vidInit_4bits(void) {

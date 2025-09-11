@@ -39,6 +39,7 @@ void MPU6050_voidCalibrateAllSensors(void);
 /* ---------- (Optional pure-math helper, no I2C) ---------- */
 void MPU6050_anglesFromAccel(s16 ax, s16 ay, s16 az, float* roll, float* pitch); 
 
+mpu6050_status_t MPU6050_readSensorData(u8 id, mpu6050_raw_data_t* data);
 
 
 #endif
