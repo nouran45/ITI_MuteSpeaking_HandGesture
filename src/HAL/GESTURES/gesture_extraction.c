@@ -3,6 +3,7 @@
 #include "STD_TYPES.h"
 #include <math.h>
 #include <string.h>
+#include <stdio.h>
 #include "TCA9548A_Interface.h"
 #include "TCA9548A_Integration.h"
 #include "MPU6050_Interface.h"
@@ -37,9 +38,9 @@ void gesture_extraction_init(void) {
         u8 sensors_found = TCA9548A_TestAllSensors();
         
         // Send diagnostic information via UART
-        char debug_msg[64];
-        sprintf(debug_msg, "Gesture system initialized. Sensors found: %d/5\r\n", sensors_found);
-        UART_voidSendString(debug_msg);
+        UART_voidSendString("Gesture system initialized. Sensors found: ");
+        UART_voidSendNumber(sensors_found);
+        UART_voidSendString("/5\r\n");
         
         if (sensors_found < 4) {  // At least 4 sensors should be working
             UART_voidSendString("WARNING: Not all sensors detected!\r\n");
@@ -89,9 +90,9 @@ bool read_all_sensors_data(void) {
             add_sensor_data(finger, roll, pitch);
         } else {
             // Handle sensor read error
-            char error_msg[32];
-            sprintf(error_msg, "Sensor %d read error\r\n", finger);
-            UART_voidSendString(error_msg);
+            UART_voidSendString("Sensor ");
+            UART_voidSendNumber(finger);
+            UART_voidSendString(" read error\r\n");
             return false;
         }
     }
@@ -101,7 +102,7 @@ bool read_all_sensors_data(void) {
 
 f32 calculate_roll_from_accel(s16 ax, s16 ay, s16 az) {
     // Convert to g's (assuming ±2g range, 16-bit resolution)
-    f32 ax_g = (f32)ax / 16384.0f;
+    (void)ax;  // Suppress unused parameter warning - ax not needed for roll calculation
     f32 ay_g = (f32)ay / 16384.0f;
     f32 az_g = (f32)az / 16384.0f;
     
@@ -324,24 +325,34 @@ void print_sensor_diagnostics(void) {
         mpu6050_raw_data_t raw_data;
         
         if (MPU6050_readSensorData(finger, &raw_data) == MPU6050_OK) {
-            char msg[128];
-            sprintf(msg, "Finger %d: AX=%d, AY=%d, AZ=%d, GX=%d, GY=%d, GZ=%d\r\n",
-                    finger, raw_data.ax, raw_data.ay, raw_data.az,
-                    raw_data.gx, raw_data.gy, raw_data.gz);
-            UART_voidSendString(msg);
+            UART_voidSendString("Finger ");
+            UART_voidSendNumber(finger);
+            UART_voidSendString(": AX=");
+            UART_voidSendNumber(raw_data.ax);
+            UART_voidSendString(", AY=");
+            UART_voidSendNumber(raw_data.ay);
+            UART_voidSendString(", AZ=");
+            UART_voidSendNumber(raw_data.az);
+            UART_voidSendString(", GX=");
+            UART_voidSendNumber(raw_data.gx);
+            UART_voidSendString(", GY=");
+            UART_voidSendNumber(raw_data.gy);
+            UART_voidSendString(", GZ=");
+            UART_voidSendNumber(raw_data.gz);
+            UART_voidSendString("\r\n");
         } else {
-            char msg[32];
-            sprintf(msg, "Finger %d: SENSOR ERROR\r\n", finger);
-            UART_voidSendString(msg);
+            UART_voidSendString("Finger ");
+            UART_voidSendNumber(finger);
+            UART_voidSendString(": SENSOR ERROR\r\n");
         }
     }
     
     // Print buffer status
-    char buffer_msg[64];
-    sprintf(buffer_msg, "Buffer: Index=%d, Full=%s\r\n", 
-            g_gesture_buffer.buffer_index,
-            g_gesture_buffer.buffer_full ? "YES" : "NO");
-    UART_voidSendString(buffer_msg);
+    UART_voidSendString("Buffer: Index=");
+    UART_voidSendNumber(g_gesture_buffer.buffer_index);
+    UART_voidSendString(", Full=");
+    UART_voidSendString(g_gesture_buffer.buffer_full ? "YES" : "NO");
+    UART_voidSendString("\r\n");
     
     UART_voidSendString("========================\r\n");
 }

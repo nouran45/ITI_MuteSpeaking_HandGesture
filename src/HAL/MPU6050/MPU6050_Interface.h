@@ -24,6 +24,8 @@ mpu6050_status_t  MPU6050_readAll(u8 id,
                      s16* t,
                      s16* gx, s16* gy, s16* gz);
 
+mpu6050_status_t  MPU6050_readSensorData(u8 id, mpu6050_raw_data_t* data);
+
 void MPU6050_voidReadAccel(u8 id, s16* ax, s16* ay, s16* az);
 void MPU6050_voidReadGyro (u8 id, s16* gx, s16* gy, s16* gz);
 

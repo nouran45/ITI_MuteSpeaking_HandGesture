@@ -15,10 +15,18 @@ void TCA9548A_SelectChannelCallback(u8 u8Channel) {
     if (u8Channel == 0xFF) {
         // Special case: disable all channels
         TCA9548A_DisableAllChannels();
-    } else {
-        // Select the specific channel
-        TCA9548A_SelectChannel(u8Channel);
+    } else if (u8Channel < 5) {  // Only allow valid sensor channels 0-4
+        // Select the specific channel with error checking
+        TCA9548A_Status_t status = TCA9548A_SelectChannel(u8Channel);
+        if (status != TCA9548A_OK) {
+            // Log error but don't halt system
+            UART_voidSendString("Channel select failed: ");
+            UART_voidSendNumber(u8Channel);
+            UART_voidSendString("\r\n");
+        }
     }
+    // Add small delay for multiplexer settling
+    _delay_ms(2);
 }
 
 TCA9548A_Status_t TCA9548A_InitializeSmartGloveSystem(void) {

@@ -227,10 +227,32 @@ TCA9548A_Status_t TCA9548A_SoftwareReset(void) {
 }
 
 TCA9548A_Status_t TCA9548A_TestCommunication(void) {
-    u8 test_data;
+    u8 current_channels;
     
-    // Try to read from the device - if it responds, communication is working
-    if (I2C_u8ReadRegs(TCA9548A_I2C_ADDRESS, 0x00, &test_data, 1)) {
+    // TCA9548A uses direct byte communication, not register-based
+    // Try to read current channel selection directly
+    if (I2C_u8ReadByte(TCA9548A_I2C_ADDRESS, &current_channels)) {
+        return TCA9548A_ERROR_I2C;
+    }
+    
+    // Test write capability by selecting no channels and reading back
+    if (I2C_u8WriteByte(TCA9548A_I2C_ADDRESS, TCA9548A_NO_CHANNEL)) {
+        return TCA9548A_ERROR_I2C;
+    }
+    
+    // Read back to verify the write worked
+    u8 readback;
+    if (I2C_u8ReadByte(TCA9548A_I2C_ADDRESS, &readback)) {
+        return TCA9548A_ERROR_I2C;
+    }
+    
+    // Verify that no channels are selected (should be 0x00)
+    if (readback != TCA9548A_NO_CHANNEL) {
+        return TCA9548A_ERROR_I2C;
+    }
+    
+    // Restore original channel selection
+    if (I2C_u8WriteByte(TCA9548A_I2C_ADDRESS, current_channels)) {
         return TCA9548A_ERROR_I2C;
     }
     
@@ -251,13 +273,10 @@ TCA9548A_Status_t TCA9548A_ReadRegister(u8 u8Channel, u8 u8DeviceAddr, u8 u8RegA
         return status;
     }
     
-    // Select the channel
-    status = TCA9548A_SelectChannel(u8Channel);
-    if (status != TCA9548A_OK) {
-        return status;
-    }
+    // NOTE: Channel selection is handled by MPU6050 callback system
+    // Do NOT select channel here to avoid conflicts
     
-    // Read from the device on the selected channel
+    // Read from the device (callback will handle channel selection)
     if (I2C_u8ReadRegs(u8DeviceAddr, u8RegAddr, pu8Data, 1)) {
         return TCA9548A_ERROR_I2C;
     }
@@ -275,13 +294,10 @@ TCA9548A_Status_t TCA9548A_WriteRegister(u8 u8Channel, u8 u8DeviceAddr, u8 u8Reg
         return status;
     }
     
-    // Select the channel
-    status = TCA9548A_SelectChannel(u8Channel);
-    if (status != TCA9548A_OK) {
-        return status;
-    }
+    // NOTE: Channel selection is handled by MPU6050 callback system
+    // Do NOT select channel here to avoid conflicts
     
-    // Write to the device on the selected channel
+    // Write to the device (callback will handle channel selection)
     if (I2C_u8WriteReg(u8DeviceAddr, u8RegAddr, u8Data)) {
         return TCA9548A_ERROR_I2C;
     }
@@ -303,13 +319,10 @@ TCA9548A_Status_t TCA9548A_ReadMultipleRegisters(u8 u8Channel, u8 u8DeviceAddr, 
         return status;
     }
     
-    // Select the channel
-    status = TCA9548A_SelectChannel(u8Channel);
-    if (status != TCA9548A_OK) {
-        return status;
-    }
+    // NOTE: Channel selection is handled by MPU6050 callback system
+    // Do NOT select channel here to avoid conflicts
     
-    // Read from the device on the selected channel
+    // Read from the device (callback will handle channel selection)
     if (I2C_u8ReadRegs(u8DeviceAddr, u8RegAddr, pu8Data, u8Length)) {
         return TCA9548A_ERROR_I2C;
     }

@@ -171,10 +171,10 @@ f32 calculate_feature_magnitude(const feature_vector_t* features) {
 
 void log_feature_statistics(const feature_vector_t* features) {
     if (!features) return;
-    f32 magnitude = calculate_feature_magnitude(features);
+    // f32 magnitude = calculate_feature_magnitude(features);  // Currently unused
     u8 is_valid = validate_feature_vector(features);
     UART_voidSendString("Feature Stats:\r\n  Valid: ");
-    UART_voidSendChar(is_valid ? '1' : '0');
+    UART_voidSendByte(is_valid ? '1' : '0');  // Use UART_voidSendByte instead of UART_voidSendChar
     UART_voidSendString("\r\n  Magnitude: ");
     // UART_voidSendFloat(magnitude);
     UART_voidSendString("\r\n");
@@ -196,6 +196,7 @@ u8 compare_feature_vectors(const feature_vector_t* feat1, const feature_vector_t
 }
 
 // --- Static helpers if not provided elsewhere ---
+static f32 calculate_mean(const f32* data, u8 size) __attribute__((unused));
 static f32 calculate_mean(const f32* data, u8 size) {
     if (!data || size == 0) return 0.0f;
     f32 sum = 0.0f;
@@ -203,6 +204,7 @@ static f32 calculate_mean(const f32* data, u8 size) {
     return sum / size;
 }
 
+static f32 calculate_std(const f32* data, u8 size, f32 mean) __attribute__((unused));
 static f32 calculate_std(const f32* data, u8 size, f32 mean) {
     if (!data || size == 0) return 0.0f;
     f32 sum = 0.0f;
