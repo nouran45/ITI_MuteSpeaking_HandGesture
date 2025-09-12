@@ -2,8 +2,10 @@
 #include "BIT_MATH.h"
 #include "TCA9548A_Interface.h"
 #include "TCA9548A_Config.h"
-#include "../../MCAL/I2C/i2c_helpers.h"
-#include "../../MCAL/DIO/DIO_Interface.h"
+#include "TCA9548A_Integration.h"
+#include "I2C_Interface.h"
+#include "DIO_Interface.h"
+#include "DIO_Register.h"
 #include <util/delay.h>
 
 // Internal state tracking
@@ -40,12 +42,12 @@ static TCA9548A_Status_t validate_channel(u8 channel) {
  */
 static TCA9548A_Status_t write_channel_register(u8 channel_mask) {
     // TCA9548A uses a simple write of the channel mask directly to the device
-    // No register address is needed - just send the channel mask byte
     if (I2C_u8WriteByte(TCA9548A_I2C_ADDRESS, channel_mask)) {
         return TCA9548A_ERROR_I2C;
     }
     
     tca9548a_state.current_channel_mask = channel_mask;
+   _delay_ms(TCA9548A_SETTLING_TIME_MS); // ✅ ADDED: Critical delay for mux stability
     return TCA9548A_OK;
 }
 

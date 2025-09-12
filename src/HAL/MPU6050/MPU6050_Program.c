@@ -1,132 +1,187 @@
-#include "../../LIB/STD_TYPES.h"
-#include "../../LIB/BIT_MATH.h"
+#include "STD_TYPES.h"
+#include "BIT_MATH.h"
 #include "MPU6050_Interface.h"
 #include "MPU6050_Config.h"
-#include "mpu6050_types.h"
-#include "../../MCAL/I2C/i2c_helpers.h"
-#include "UART_Interface.h" // optional for logs
-#include <math.h>
+#include "I2C_Interface.h"
+#include <util/delay.h>
+
+/***************************** Private Variables *****************************/
 
 
+MPU6050_Slot_t MPU6050_astSensors[MPU6050_MAX_SENSORS];
+static mpu_mux_select_fn MPU6050_pfnMuxSelector = 0;
 
-typedef struct { mpu6050_dev_t dev; u8 registered; } mpu6050_slot_t;
-static mpu6050_slot_t g_sensors[MPU6050_MAX_SENSORS];
-static mpu_mux_select_fn s_mux = 0;
-
-
-void MPU6050_voidInit(void){ (void)MPU6050_initSensor(0); }
-
-static inline void select_channel(const mpu6050_dev_t* d){
-    if(s_mux && d->mux_channel != 0xFF) s_mux(d->mux_channel);
+/***************************** Private Functions *****************************/
+static void MPU6050_voidSelectChannel(const MPU6050_Dev_t* pstDevCpy) {
+    if(MPU6050_pfnMuxSelector && pstDevCpy->u8MuxChannel != 0xFF) {
+        MPU6050_pfnMuxSelector(pstDevCpy->u8MuxChannel);
+        _delay_us(10);
+    }
 }
 
-static inline s16 be16(const u8* p){ return (s16)((p[0]<<8)|p[1]); }
-
-void MPU6050_setMuxSelector(mpu_mux_select_fn fn){ s_mux = fn; }
-
-void MPU6050_registerSensor(u8 id, const mpu6050_dev_t* cfg){
-    if(id<MPU6050_MAX_SENSORS && cfg){ g_sensors[id].dev = *cfg; g_sensors[id].registered = 1; }
+static s16 MPU6050_s16Be16(const u8* pu8DataCpy) {
+    return (s16)((pu8DataCpy[0] << 8) | pu8DataCpy[1]);
 }
 
-mpu6050_status_t MPU6050_initSensor(u8 id){
-    if(id>=MPU6050_MAX_SENSORS || !g_sensors[id].registered) return MPU6050_E_BADID;
-    mpu6050_dev_t* d = &g_sensors[id].dev;
+static u8 MPU6050_u8Burst14(u8 u8IdCopy, u8* pu8BufferCpy) {
+    if(u8IdCopy >= MPU6050_MAX_SENSORS || !MPU6050_astSensors[u8IdCopy].u8Registered) {
+        return 1;
+    }
 
-    select_channel(d);
+    const MPU6050_Dev_t* pstDev = &MPU6050_astSensors[u8IdCopy].stDev;
+    MPU6050_voidSelectChannel(pstDev);
 
-    // WHO_AM_I
-    u8 who=0xFF;
-    if(I2C_u8ReadRegs(d->i2c_addr, 0x75, &who, 1)) return MPU6050_E_I2C;
-    if(who != 0x68) return MPU6050_E_WHOAMI;
+    I2C_voidStart();
+    I2C_voidWrite(pstDev->u8I2cAddr << 1);
+    I2C_voidWrite(MPU6050_REG_ACCEL_XOUT_H);
+    I2C_voidStop();
+    _delay_us(10);
 
-    // Wake + config
-    if(I2C_u8WriteReg(d->i2c_addr, MPU6050_REG_PWR_MGMT_1, MPU6050_PWR_WAKEUP)) return MPU6050_E_I2C;
-    if(I2C_u8WriteReg(d->i2c_addr, MPU6050_REG_SMPLRT_DIV, 0x07))               return MPU6050_E_I2C;
-    if(I2C_u8WriteReg(d->i2c_addr, MPU6050_REG_CONFIG,       0x03))             return MPU6050_E_I2C;
-    if(I2C_u8WriteReg(d->i2c_addr, MPU6050_REG_GYRO_CONFIG,  MPU6050_GYRO_FS_250)) return MPU6050_E_I2C;
-    if(I2C_u8WriteReg(d->i2c_addr, MPU6050_REG_ACCEL_CONFIG, MPU6050_ACCEL_FS_2G)) return MPU6050_E_I2C;
+    I2C_voidStart();
+    I2C_voidWrite((pstDev->u8I2cAddr << 1) | 1);
+
+    for(u8 i = 0; i < 13; i++) {
+        pu8BufferCpy[i] = I2C_u8ReadWithACK();
+    }
+    pu8BufferCpy[13] = I2C_u8ReadWithNACK();
+
+    I2C_voidStop();
+
+    return 0;
+}
+
+/***************************** Public Functions *****************************/
+void MPU6050_voidSetMuxSelector(mpu_mux_select_fn fn) {
+    MPU6050_pfnMuxSelector = fn;
+}
+
+void MPU6050_voidRegisterSensor(u8 u8IdCopy, const MPU6050_Dev_t* pstDevCpy) {
+    if(u8IdCopy < MPU6050_MAX_SENSORS && pstDevCpy) {
+        MPU6050_astSensors[u8IdCopy].stDev = *pstDevCpy;
+        MPU6050_astSensors[u8IdCopy].u8Registered = 1;
+    }
+}
+
+MPU6050_Status_t MPU6050_enumInitSensor(u8 u8IdCopy) {
+    if(u8IdCopy >= MPU6050_MAX_SENSORS || !MPU6050_astSensors[u8IdCopy].u8Registered) {
+        return MPU6050_E_BADID;
+    }
+
+    MPU6050_Dev_t* pstDev = &MPU6050_astSensors[u8IdCopy].stDev;
+    MPU6050_voidSelectChannel(pstDev);
+
+    I2C_voidStart();
+    I2C_voidWrite(pstDev->u8I2cAddr << 1);
+    I2C_voidWrite(MPU6050_REG_WHO_AM_I);
+    I2C_voidStop();
+    _delay_us(10);
+
+    I2C_voidStart();
+    I2C_voidWrite((pstDev->u8I2cAddr << 1) | 1);
+    u8 u8WhoAmI = I2C_u8ReadWithNACK();
+    I2C_voidStop();
+
+    if(u8WhoAmI != 0x68) {
+        return MPU6050_E_WHOAMI;
+    }
+
+    I2C_voidStart();
+    I2C_voidWrite(pstDev->u8I2cAddr << 1);
+    I2C_voidWrite(MPU6050_REG_PWR_MGMT_1);
+    I2C_voidWrite(MPU6050_PWR_WAKEUP);
+    I2C_voidStop();
+    _delay_ms(10);
+
+    I2C_voidStart();
+    I2C_voidWrite(pstDev->u8I2cAddr << 1);
+    I2C_voidWrite(MPU6050_REG_GYRO_CONFIG);
+    I2C_voidWrite(MPU6050_GYRO_FS_250);
+    I2C_voidStop();
+    _delay_ms(10);
+
+    I2C_voidStart();
+    I2C_voidWrite(pstDev->u8I2cAddr << 1);
+    I2C_voidWrite(MPU6050_REG_ACCEL_CONFIG);
+    I2C_voidWrite(MPU6050_ACCEL_FS_2G);
+    I2C_voidStop();
+    _delay_ms(10);
 
     return MPU6050_OK;
 }
 
-void MPU6050_initAllSensors(void){
-    for(u8 i=0;i<MPU6050_MAX_SENSORS;i++){
-        if(g_sensors[i].registered) (void)MPU6050_initSensor(i);
+void MPU6050_voidInitAllSensors(void) {
+    for(u8 i = 0; i < MPU6050_MAX_SENSORS; i++) {
+        if(MPU6050_astSensors[i].u8Registered) {
+            MPU6050_enumInitSensor(i);
+        }
     }
 }
 
-static u8 burst14(u8 id, u8* b){
-    if(id>=MPU6050_MAX_SENSORS || !g_sensors[id].registered) return 1;
-    const mpu6050_dev_t* d = &g_sensors[id].dev;
-    select_channel(d);
-    return I2C_u8ReadRegs(d->i2c_addr, MPU6050_REG_ACCEL_XOUT_H, b, 14);
-}
+MPU6050_Status_t MPU6050_enumReadAll(u8 u8IdCopy, s16* ps16AxCpy, s16* ps16AyCpy, s16* ps16AzCpy,
+                                    s16* ps16TempCpy, s16* ps16GxCpy, s16* ps16GyCpy, s16* ps16GzCpy) {
+    u8 u8Buffer[14];
+    if(MPU6050_u8Burst14(u8IdCopy, u8Buffer)) {
+        return MPU6050_E_I2C;
+    }
 
-mpu6050_status_t MPU6050_readAll(u8 id, s16* ax, s16* ay, s16* az,
-                                       s16* t,  s16* gx, s16* gy, s16* gz){
-    u8 b[14]; if(burst14(id,b)) return MPU6050_E_I2C;
-    const mpu6050_dev_t* d = &g_sensors[id].dev;
-    s16 AX=be16(b+0), AY=be16(b+2), AZ=be16(b+4);
-    s16 TT=be16(b+6), GX=be16(b+8), GY=be16(b+10), GZ=be16(b+12);
-    if(ax) *ax = AX - d->ax_off; 
-    if(ay) *ay = AY - d->ay_off; 
-    if(az) *az = AZ - d->az_off;
-    if(t ) *t  = TT;
-    if(gx) *gx = GX - d->gx_off; 
-    if(gy) *gy = GY - d->gy_off; 
-    if(gz) *gz = GZ - d->gz_off;
+    const MPU6050_Dev_t* pstDev = &MPU6050_astSensors[u8IdCopy].stDev;
+
+    if(ps16AxCpy) *ps16AxCpy = MPU6050_s16Be16(u8Buffer+0) - pstDev->s16AxOff;
+    if(ps16AyCpy) *ps16AyCpy = MPU6050_s16Be16(u8Buffer+2) - pstDev->s16AyOff;
+    if(ps16AzCpy) *ps16AzCpy = MPU6050_s16Be16(u8Buffer+4) - pstDev->s16AzOff;
+    if(ps16TempCpy) *ps16TempCpy = MPU6050_s16Be16(u8Buffer+6);
+    if(ps16GxCpy) *ps16GxCpy = MPU6050_s16Be16(u8Buffer+8) - pstDev->s16GxOff;
+    if(ps16GyCpy) *ps16GyCpy = MPU6050_s16Be16(u8Buffer+10) - pstDev->s16GyOff;
+    if(ps16GzCpy) *ps16GzCpy = MPU6050_s16Be16(u8Buffer+12) - pstDev->s16GzOff;
+
     return MPU6050_OK;
 }
 
-mpu6050_status_t MPU6050_readSensorData(u8 id, mpu6050_raw_data_t* data) {
-    if (!data) return MPU6050_E_I2C;
-    return MPU6050_readAll(id, &data->ax, &data->ay, &data->az, 
-                          &data->temp, &data->gx, &data->gy, &data->gz);
+void MPU6050_voidReadAccel(u8 u8IdCopy, s16* ps16AxCpy, s16* ps16AyCpy, s16* ps16AzCpy) {
+    MPU6050_enumReadAll(u8IdCopy, ps16AxCpy, ps16AyCpy, ps16AzCpy, 0, 0, 0, 0);
 }
 
-void MPU6050_voidReadAccel(u8 id, s16* ax, s16* ay, s16* az){
-    (void)MPU6050_readAll(id, ax, ay, az, 0, 0, 0, 0);
-}
-void MPU6050_voidReadGyro(u8 id, s16* gx, s16* gy, s16* gz){
-    (void)MPU6050_readAll(id, 0, 0, 0, 0, gx, gy, gz);
+void MPU6050_voidReadGyro(u8 u8IdCopy, s16* ps16GxCpy, s16* ps16GyCpy, s16* ps16GzCpy) {
+    MPU6050_enumReadAll(u8IdCopy, 0, 0, 0, 0, ps16GxCpy, ps16GyCpy, ps16GzCpy);
 }
 
-void MPU6050_voidCalculateAngles(u8 id, float* roll, float* pitch){
-    s16 ax,ay,az; MPU6050_voidReadAccel(id,&ax,&ay,&az);
-    const float g = 16384.0f;
-    float axg = ax/g, ayg = ay/g, azg = az/g;
-    if(roll)  *roll  = (180.0f/M_PI) * atanf( ayg / azg );
-    if(pitch) *pitch = (180.0f/M_PI) * atanf(-axg / sqrtf(ayg*ayg + azg*azg));
+MPU6050_Status_t MPU6050_enumReadSensorData(u8 u8IdCopy, MPU6050_RawData_t* pstDataCpy) {
+    if (!pstDataCpy) return MPU6050_E_BADID;
+    return MPU6050_enumReadAll(u8IdCopy, &pstDataCpy->s16Ax, &pstDataCpy->s16Ay, &pstDataCpy->s16Az,
+                              &pstDataCpy->s16Temp, &pstDataCpy->s16Gx, &pstDataCpy->s16Gy, &pstDataCpy->s16Gz);
 }
 
-void MPU6050_voidReadAllSensorsAngles(float* rollV, float* pitchV){
-    for(u8 i=0;i<MPU6050_MAX_SENSORS;i++){
-        if(!g_sensors[i].registered) continue;
-        MPU6050_voidCalculateAngles(i, rollV? &rollV[i]:0, pitchV? &pitchV[i]:0);
+void MPU6050_voidCalibrateSensor(u8 u8IdCopy) {
+    if(u8IdCopy >= MPU6050_MAX_SENSORS || !MPU6050_astSensors[u8IdCopy].u8Registered) return;
+
+    long s32Ax = 0, s32Ay = 0, s32Az = 0, s32Gx = 0, s32Gy = 0, s32Gz = 0;
+    u8 u8Buffer[14];
+    const u16 u16Samples = 100;
+
+    for(u16 i = 0; i < u16Samples; i++) {
+        if(MPU6050_u8Burst14(u8IdCopy, u8Buffer)) continue;
+        s32Ax += MPU6050_s16Be16(u8Buffer+0);
+        s32Ay += MPU6050_s16Be16(u8Buffer+2);
+        s32Az += MPU6050_s16Be16(u8Buffer+4);
+        s32Gx += MPU6050_s16Be16(u8Buffer+8);
+        s32Gy += MPU6050_s16Be16(u8Buffer+10);
+        s32Gz += MPU6050_s16Be16(u8Buffer+12);
+        _delay_ms(10);
     }
+
+    MPU6050_Dev_t* pstDev = &MPU6050_astSensors[u8IdCopy].stDev;
+    pstDev->s16AxOff = (s16)(s32Ax / u16Samples);
+    pstDev->s16AyOff = (s16)(s32Ay / u16Samples);
+    pstDev->s16AzOff = (s16)((s32Az / u16Samples) - 16384);
+    pstDev->s16GxOff = (s16)(s32Gx / u16Samples);
+    pstDev->s16GyOff = (s16)(s32Gy / u16Samples);
+    pstDev->s16GzOff = (s16)(s32Gz / u16Samples);
 }
 
-void MPU6050_voidCalibrateSensor(u8 id){
-    if(id>=MPU6050_MAX_SENSORS || !g_sensors[id].registered) return;
-    long ax=0,ay=0,az=0,gx=0,gy=0,gz=0; u8 b[14];
-    const u16 N=256;
-    for(u16 i=0;i<N;i++){
-        if(burst14(id,b)) continue;
-        ax += be16(b+0); ay += be16(b+2); az += be16(b+4);
-        gx += be16(b+8); gy += be16(b+10); gz += be16(b+12);
+void MPU6050_voidCalibrateAllSensors(void) {
+    for(u8 i = 0; i < MPU6050_MAX_SENSORS; i++) {
+        if(MPU6050_astSensors[i].u8Registered) {
+            MPU6050_voidCalibrateSensor(i);
+        }
     }
-    mpu6050_dev_t* d=&g_sensors[id].dev;
-    d->ax_off=(s16)(ax/N); d->ay_off=(s16)(ay/N); d->az_off=(s16)((az/N)-16384); // remove 1g if upright
-    d->gx_off=(s16)(gx/N); d->gy_off=(s16)(gy/N); d->gz_off=(s16)(gz/N);
-}
-
-void MPU6050_voidCalibrateAllSensors(void){
-    for(u8 i=0;i<MPU6050_MAX_SENSORS;i++){
-        if(g_sensors[i].registered) MPU6050_voidCalibrateSensor(i);
-    }
-}
-
-mpu6050_status_t MPU6050_readSensorData(u8 id, mpu6050_raw_data_t* data) {
-    if (!data) return MPU6050_E_BADID;
-    return MPU6050_readAll(id, &data->ax, &data->ay, &data->az, &data->temp, &data->gx, &data->gy, &data->gz);
 }

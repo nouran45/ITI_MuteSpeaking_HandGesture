@@ -1,9 +1,9 @@
-#include "../../LIB/STD_TYPES.h"
-#include "../../LIB/BIT_MATH.h"
-#include "../../MCAL/DIO/DIO_Interface.h"
+#include "STD_TYPES.h"
+#include "BIT_MATH.h"
+#include "DIO_Interface.h"
 #include "LCD_Config.h"
 #include "LCD_Interface.h"
-#include "../../MCAL/DIO/DIO_Register.h"
+#include "DIO_Register.h"
 #include <util/delay.h>
 #include <stdio.h>  // For sprintf function
 

@@ -1,29 +1,57 @@
 #include "STD_TYPES.h"
 #include "BIT_MATH.h"
-#include "DIO_Interface.h"
 #include "LCD_Interface.h"
 #include "I2C_Interface.h"
 #include "MPU6050_Interface.h"
+#include "MPU6050_Config.h"
 #include "UART_Interface.h"
+#include "DIO_Interface.h"
 #include "DIO_Register.h"
 #include "TCA9548A_Interface.h"
 #include "TCA9548A_Integration.h"
+#include <MPU6050/MPU6050_Interface.h>
 #include <util/delay.h>
 #include <stdio.h>
 
 
-// Define your 5 sensor configurations
-mpu6050_dev_t sensor_configs[5] = {
+
+// Define your 5 sensor configurations with CORRECT field names
+MPU6050_Dev_t sensor_configs[5] = {
     // Thumb sensor (uses mux channel 0)
-    { .i2c_addr = 0x68, .mux_channel = 0, .ax_off=0, .ay_off=0, .az_off=0, .gx_off=0, .gy_off=0, .gz_off=0 },
+    { 
+        .u8I2cAddr = 0x68, 
+        .u8MuxChannel = 0, 
+        .s16AxOff = 0, .s16AyOff = 0, .s16AzOff = 0,
+        .s16GxOff = 0, .s16GyOff = 0, .s16GzOff = 0
+    },
     // Index finger sensor (uses mux channel 1)  
-    { .i2c_addr = 0x68, .mux_channel = 1, .ax_off=0, .ay_off=0, .az_off=0, .gx_off=0, .gy_off=0, .gz_off=0 },
+    { 
+        .u8I2cAddr = 0x68, 
+        .u8MuxChannel = 1, 
+        .s16AxOff = 0, .s16AyOff = 0, .s16AzOff = 0,
+        .s16GxOff = 0, .s16GyOff = 0, .s16GzOff = 0
+    },
     // Middle finger sensor (uses mux channel 2)
-    { .i2c_addr = 0x68, .mux_channel = 2, .ax_off=0, .ay_off=0, .az_off=0, .gx_off=0, .gy_off=0, .gz_off=0 },
+    { 
+        .u8I2cAddr = 0x68, 
+        .u8MuxChannel = 2, 
+        .s16AxOff = 0, .s16AyOff = 0, .s16AzOff = 0,
+        .s16GxOff = 0, .s16GyOff = 0, .s16GzOff = 0
+    },
     // Ring finger sensor (uses mux channel 3)
-    { .i2c_addr = 0x68, .mux_channel = 3, .ax_off=0, .ay_off=0, .az_off=0, .gx_off=0, .gy_off=0, .gz_off=0 },
+    { 
+        .u8I2cAddr = 0x68, 
+        .u8MuxChannel = 3, 
+        .s16AxOff = 0, .s16AyOff = 0, .s16AzOff = 0,
+        .s16GxOff = 0, .s16GyOff = 0, .s16GzOff = 0
+    },
     // Palm sensor (uses mux channel 4)
-    { .i2c_addr = 0x68, .mux_channel = 4, .ax_off=0, .ay_off=0, .az_off=0, .gx_off=0, .gy_off=0, .gz_off=0 }
+    { 
+        .u8I2cAddr = 0x68, 
+        .u8MuxChannel = 4, 
+        .s16AxOff = 0, .s16AyOff = 0, .s16AzOff = 0,
+        .s16GxOff = 0, .s16GyOff = 0, .s16GzOff = 0
+    }
 };
 
 int main(void) {
@@ -105,16 +133,16 @@ int main(void) {
     LCD_vidGotoxy(0, 1);
     LCD_vidWriteString((u8*)"Sensors Reg...");
     for(int i = 0; i < 5; i++) {
-        MPU6050_registerSensor(i, &sensor_configs[i]);
+        MPU6050_voidRegisterSensor(i, &sensor_configs[i]);
     }
 
     // Initialize the TCA9548A multiplexer callback
-    MPU6050_setMuxSelector(TCA9548A_SelectChannelCallback);
+    MPU6050_voidSetMuxSelector(TCA9548A_SelectChannelCallback);
     
     // Initialize all MPU6050 sensors
     LCD_vidGotoxy(0, 1);
     LCD_vidWriteString((u8*)"MPU Init...");
-    MPU6050_initAllSensors();
+    MPU6050_voidInitAllSensors();
     _delay_ms(1000);  // Give MPU6050 time to initialize
     
     LCD_vidGotoxy(0, 1);
@@ -189,7 +217,7 @@ int main(void) {
             s16GyroX = 0xFFFF; s16GyroY = 0xFFFF; s16GyroZ = 0xFFFF;
             
             // Try to read accelerometer and gyroscope data with error checking
-            mpu6050_status_t accel_status = MPU6050_readAll(sensor_id, 
+            MPU6050_Status_t accel_status = MPU6050_enumReadAll(sensor_id, 
                 &s16AccelX, &s16AccelY, &s16AccelZ, NULL, 
                 &s16GyroX, &s16GyroY, &s16GyroZ);
             

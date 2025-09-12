@@ -1,15 +1,17 @@
 #ifndef MPU6050_CONFIG_H
 #define MPU6050_CONFIG_H
 
-// How many sensors you want to support
-#define MPU6050_MAX_SENSORS 5   // change if you need fewer/ more
+/***************************** MPU6050 Configuration *****************************/
+#define MPU6050_MAX_SENSORS 5
 
-// MPU6050 Register Addresses
-#define MPU6050_REG_PWR_MGMT_1   0x6B
+/***************************** MPU6050 Register Addresses *****************************/
 #define MPU6050_REG_SMPLRT_DIV   0x19
 #define MPU6050_REG_CONFIG       0x1A
 #define MPU6050_REG_GYRO_CONFIG  0x1B
 #define MPU6050_REG_ACCEL_CONFIG 0x1C
+#define MPU6050_REG_PWR_MGMT_1   0x6B
+#define MPU6050_REG_WHO_AM_I     0x75
+
 #define MPU6050_REG_ACCEL_XOUT_H 0x3B
 #define MPU6050_REG_ACCEL_XOUT_L 0x3C
 #define MPU6050_REG_ACCEL_YOUT_H 0x3D
@@ -25,10 +27,10 @@
 #define MPU6050_REG_GYRO_ZOUT_H  0x47
 #define MPU6050_REG_GYRO_ZOUT_L  0x48
 
-// Configuration values
+/***************************** Configuration Values *****************************/
 #define MPU6050_PWR_RESET        0x80
 #define MPU6050_PWR_WAKEUP       0x00
 #define MPU6050_GYRO_FS_250      0x00
 #define MPU6050_ACCEL_FS_2G      0x00
 
-#endif
+#endif /* MPU6050_CONFIG_H */

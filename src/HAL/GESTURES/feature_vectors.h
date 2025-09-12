@@ -1,7 +1,7 @@
 #ifndef FEATURE_VECTORS_H
 #define FEATURE_VECTORS_H
 
-#include "../../LIB/STD_TYPES.h"      // For u8, f32, etc.
+#include "STD_TYPES.h"      // For u8, f32, etc.
 #include "gesture_extraction.h"       // For feature_vector_t, NUM_FINGERS
 
 // Feature vector serialization constants

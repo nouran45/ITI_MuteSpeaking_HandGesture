@@ -2,46 +2,64 @@
 #define MPU6050_INTERFACE_H
 
 #include "STD_TYPES.h"
-#include "mpu6050_types.h"
-#include "MPU6050_Config.h"
 
-// MPU6050 I2C Address
+
+/***************************** MPU6050 I2C Address *****************************/
 #define MPU6050_ADDRESS 0x68
 
-/* ---------- Optional mux selector ---------- */
-void MPU6050_setMuxSelector(mpu_mux_select_fn fn);
+/***************************** Type Definitions *****************************/
 
-/* ---------- Registration / init ---------- */
-void              MPU6050_voidInit(void);          // Legacy single-sensor init (sensor 0)
-void              MPU6050_registerSensor(u8 id, const mpu6050_dev_t* cfg);
-mpu6050_status_t  MPU6050_initSensor(u8 id);
-void              MPU6050_initAllSensors(void);
+// External I2C mux selector function pointer (e.g., TCA9548A). Pass 0xFF in channel to disable.
+typedef void (*mpu_mux_select_fn)(u8 u8ChannelCopy);
 
+// MPU6050 device configuration structure
+typedef struct {
+    u8  u8I2cAddr;        // 0x68 or 0x69
+    u8  u8MuxChannel;     // 0..7 or 0xFF if no mux
+    s16 s16AxOff, s16AyOff, s16AzOff;  // accel offset (raw LSB)
+    s16 s16GxOff, s16GyOff, s16GzOff;  // gyro offset (raw LSB)
+} MPU6050_Dev_t;
 
-/* ---------- Data I/O ---------- */
-mpu6050_status_t  MPU6050_readAll(u8 id,
-                     s16* ax, s16* ay, s16* az,
-                     s16* t,
-                     s16* gx, s16* gy, s16* gz);
+// MPU6050 slot structure for device management
+typedef struct {
+    MPU6050_Dev_t stDev;
+    u8 u8Registered;
+} MPU6050_Slot_t;
 
-mpu6050_status_t  MPU6050_readSensorData(u8 id, mpu6050_raw_data_t* data);
+// Raw sensor data structure
+typedef struct {
+    s16 s16Ax, s16Ay, s16Az;  // accelerometer raw values
+    s16 s16Gx, s16Gy, s16Gz;  // gyroscope raw values
+    s16 s16Temp;              // temperature raw value
+} MPU6050_RawData_t;
 
-void MPU6050_voidReadAccel(u8 id, s16* ax, s16* ay, s16* az);
-void MPU6050_voidReadGyro (u8 id, s16* gx, s16* gy, s16* gz);
+// Status enumeration
+typedef enum {
+    MPU6050_OK = 0,
+    MPU6050_E_I2C = 1,
+    MPU6050_E_WHOAMI = 2,
+    MPU6050_E_BADID = 3
+} MPU6050_Status_t;
 
-/* ---------- Angles ---------- */
-void MPU6050_voidCalculateAngles(u8 id, float* roll, float* pitch);
-/* Vector form for all registered sensors; arrays must have size >= MPU6050_MAX_SENSORS */
-void MPU6050_voidReadAllSensorsAngles(float* rollV, float* pitchV);
+/***************************** Function Prototypes *****************************/
 
-/* ---------- Calibration ---------- */
-void MPU6050_voidCalibrateSensor(u8 id);
+// Mux configuration
+void MPU6050_voidSetMuxSelector(mpu_mux_select_fn fn);
+
+// Sensor registration and initialization
+void MPU6050_voidRegisterSensor(u8 u8IdCopy, const MPU6050_Dev_t* pstDevCpy);
+MPU6050_Status_t MPU6050_enumInitSensor(u8 u8IdCopy);
+void MPU6050_voidInitAllSensors(void);
+
+// Data reading functions
+MPU6050_Status_t MPU6050_enumReadSensorData(u8 u8IdCopy, MPU6050_RawData_t* pstDataCpy);
+MPU6050_Status_t MPU6050_enumReadAll(u8 u8IdCopy, s16* ps16AxCpy, s16* ps16AyCpy, s16* ps16AzCpy,
+                                     s16* ps16TempCpy, s16* ps16GxCpy, s16* ps16GyCpy, s16* ps16GzCpy);
+void MPU6050_voidReadAccel(u8 u8IdCopy, s16* ps16AxCpy, s16* ps16AyCpy, s16* ps16AzCpy);
+void MPU6050_voidReadGyro(u8 u8IdCopy, s16* ps16GxCpy, s16* ps16GyCpy, s16* ps16GzCpy);
+
+// Calibration functions
+void MPU6050_voidCalibrateSensor(u8 u8IdCopy);
 void MPU6050_voidCalibrateAllSensors(void);
 
-/* ---------- (Optional pure-math helper, no I2C) ---------- */
-void MPU6050_anglesFromAccel(s16 ax, s16 ay, s16 az, float* roll, float* pitch); 
-
-mpu6050_status_t MPU6050_readSensorData(u8 id, mpu6050_raw_data_t* data);
-
-
-#endif
+#endif /* MPU_INTERFACE_H */

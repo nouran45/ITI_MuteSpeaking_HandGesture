@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "../../LIB/STD_TYPES.h"
+#include "STD_TYPES.h"
 
 // Configuration constants
 #define NUM_FINGERS 5

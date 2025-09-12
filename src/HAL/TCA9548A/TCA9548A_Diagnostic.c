@@ -7,7 +7,6 @@
 #include "STD_TYPES.h"
 #include "TCA9548A_Interface.h"
 #include "TCA9548A_Config.h"
-#include "../../MCAL/I2C/i2c_helpers.h"
 #include "../../MCAL/UART/UART_Interface.h"
 #include <util/delay.h>
 
@@ -40,7 +39,7 @@ void TCA9548A_DiagnosticTest(void) {
     // Test 2: Test channel selection and readback
     UART_voidSendString("\r\nTest 2: Channel Selection Test\r\n");
     
-    for (u8 channel = 0; channel < 5; channel++) {
+    for (u8 channel = TCA9548A_THUMB_CHANNEL; channel <= TCA9548A_PALM_CHANNEL; channel++) {
         UART_voidSendString("  Testing channel ");
         UART_voidSendNumber(channel);
         UART_voidSendString("...\r\n");
@@ -90,7 +89,7 @@ void TCA9548A_DiagnosticTest(void) {
     // Test 3: Test MPU6050 detection on each channel
     UART_voidSendString("\r\nTest 3: MPU6050 Detection per Channel\r\n");
     
-    for (u8 channel = 0; channel < 5; channel++) {
+    for (u8 channel = TCA9548A_THUMB_CHANNEL; channel <= TCA9548A_PALM_CHANNEL; channel++) {
         UART_voidSendString("  Channel ");
         UART_voidSendNumber(channel);
         UART_voidSendString(": ");

@@ -7,7 +7,6 @@
 #include "TCA9548A_Interface.h"
 #include "TCA9548A_Integration.h"
 #include "MPU6050_Interface.h"
-#include "../HAL/MPU6050/mpu6050_types.h"
 #include "UART_Interface.h"
 
 // Global gesture buffer
@@ -78,7 +77,7 @@ bool read_all_sensors_data(void) {
     
     // Read data from all finger sensors
     for (finger_t finger = 0; finger < NUM_FINGERS; finger++) {
-        mpu6050_raw_data_t raw_data;
+        MPU6050_RawData_t raw_data;
         
         // Read sensor data using MPU6050 multi-sensor interface
         if (MPU6050_readSensorData(finger, &raw_data) == MPU6050_OK) {
@@ -322,7 +321,7 @@ void print_sensor_diagnostics(void) {
     
     // Test each sensor individually
     for (finger_t finger = 0; finger < NUM_FINGERS; finger++) {
-        mpu6050_raw_data_t raw_data;
+        MPU6050_RawData_t raw_data;
         
         if (MPU6050_readSensorData(finger, &raw_data) == MPU6050_OK) {
             UART_voidSendString("Finger ");
