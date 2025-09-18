@@ -2,6 +2,14 @@
 #include "math_utils.h"
 #include <math.h>
 
+/* Explicit handling for isnan/isinf if math.h doesn't provide them */
+#ifndef isnan
+#define isnan(x) ((x) != (x))
+#endif
+#ifndef isinf
+#define isinf(x) (((x) == INFINITY) || ((x) == -INFINITY))
+#endif
+
 f32 math_calculate_mean(const f32* data, u8 size) {
     if (!data || size == 0) {
         return 0.0f;
@@ -30,8 +38,17 @@ f32 math_calculate_std(const f32* data, u8 size, f32 mean) {
 }
 
 f32 math_calculate_correlation(const f32* x_data, const f32* y_data, u8 size) {
+    // Input validation
     if (!x_data || !y_data || size == 0) {
         return 0.0f;
+    }
+    
+    // Validate all values are valid numbers
+    for (u8 i = 0; i < size; i++) {
+        if (isnan(x_data[i]) || isnan(y_data[i]) || 
+            isinf(x_data[i]) || isinf(y_data[i])) {
+            return 0.0f; // Invalid input data
+        }
     }
     
     // Calculate means
@@ -52,10 +69,17 @@ f32 math_calculate_correlation(const f32* x_data, const f32* y_data, u8 size) {
         sum_sq_y += diff_y * diff_y;
     }
     
+    // Robust division by zero protection with epsilon
+    const f32 EPSILON = 1e-10f;
+    if (sum_sq_x < EPSILON || sum_sq_y < EPSILON) {
+        return 0.0f;  // No correlation if either variable has no variance
+    }
+    
     f32 denominator = sqrtf(sum_sq_x * sum_sq_y);
     
-    if (denominator == 0.0f) {
-        return 0.0f;  // No correlation if either variable has no variance
+    // Double-check for potential division by zero
+    if (denominator < EPSILON) {
+        return 0.0f;
     }
     
     f32 correlation = numerator / denominator;
@@ -123,22 +147,47 @@ f32 math_calculate_range(const f32* data, u8 size) {
 
 u8 math_normalize_to_range(f32* data, u8 size, f32 current_min, f32 current_max, 
                           f32 target_min, f32 target_max) {
+    // Input validation
     if (!data || size == 0) {
+        return 0;
+    }
+    
+    // Validate input ranges
+    if (isnan(current_min) || isnan(current_max) || 
+        isnan(target_min) || isnan(target_max) ||
+        isinf(current_min) || isinf(current_max) ||
+        isinf(target_min) || isinf(target_max)) {
+        return 0;
+    }
+    
+    // Ensure ranges are properly ordered
+    if (current_min > current_max || target_min > target_max) {
         return 0;
     }
     
     f32 current_range = current_max - current_min;
     f32 target_range = target_max - target_min;
     
-    // Check for invalid ranges
-    if (current_range == 0.0f || target_range == 0.0f) {
+    // Check for invalid ranges with epsilon for floating-point comparison
+    const f32 EPSILON = 1e-6f;
+    if (current_range < EPSILON || target_range < EPSILON) {
         return 0;
     }
     
-    // Normalize each value
+    // Normalize each value with NaN and infinity checking
     for (u8 i = 0; i < size; i++) {
+        // Skip invalid values
+        if (isnan(data[i]) || isinf(data[i])) {
+            data[i] = target_min; // Default to minimum target value for invalid inputs
+            continue;
+        }
+        
         // First normalize to [0,1], then scale to target range
         f32 normalized = (data[i] - current_min) / current_range;
+        
+        // Clamp normalized value to [0,1]
+        normalized = fmaxf(0.0f, fminf(1.0f, normalized));
+        
         data[i] = target_min + (normalized * target_range);
     }
     
@@ -146,22 +195,44 @@ u8 math_normalize_to_range(f32* data, u8 size, f32 current_min, f32 current_max,
 }
 
 u8 math_z_score_normalize(f32* data, u8 size) {
+    // Input validation
     if (!data || size == 0) {
         return 0;
+    }
+    
+    // Validate input data and replace invalid values with 0
+    for (u8 i = 0; i < size; i++) {
+        if (isnan(data[i]) || isinf(data[i])) {
+            data[i] = 0.0f;
+        }
     }
     
     // Calculate mean and standard deviation
     f32 mean = math_calculate_mean(data, size);
     f32 std = math_calculate_std(data, size, mean);
     
-    // Check for zero standard deviation
-    if (std == 0.0f) {
-        return 0;
+    // Check for zero or very small standard deviation (prevent division by zero)
+    const f32 EPSILON = 1e-6f;
+    if (std < EPSILON) {
+        // If std is too small, set all values to 0 (centered)
+        for (u8 i = 0; i < size; i++) {
+            data[i] = 0.0f;
+        }
+        return 1;
     }
     
-    // Apply z-score normalization
+    // Apply z-score normalization with protection against overflow
     for (u8 i = 0; i < size; i++) {
         data[i] = (data[i] - mean) / std;
+        
+        // Clamp extremely large z-scores to reasonable range (-5 to 5)
+        // This is somewhat arbitrary but avoids extreme outliers
+        data[i] = fmaxf(-5.0f, fminf(5.0f, data[i]));
+        
+        // Final NaN check
+        if (isnan(data[i]) || isinf(data[i])) {
+            data[i] = 0.0f;
+        }
     }
     
     return 1;
